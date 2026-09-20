@@ -1,4 +1,4 @@
-import { store, currentZ, statusLabel, statusColor, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
+import { store, currentZ, statusLabel, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
 import type { Analyst, Ticket, Density } from "../core/state";
 import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml } from "../core/analysts";
 import { blockColor, priorityColor, segmentsOf, usedMinInDay, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
@@ -516,15 +516,14 @@ function monthChipHtml(ch: MonthChip, density: Density): string {
     return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
   }
   if (density === "expanded") {
-    const stc = statusColor[ch.status] || "#9aa4b2";
     return `<div class="mc mc-x" style="--c:${ch.c}" title="${tip}">
       <div class="mc-x-top">
-        ${avatarHtml(ch.analyst, 20)}
-        <span class="mc-x-p" style="background:${priorityColor(ch.pri)}">P${ch.pri}</span>
+        ${avatarHtml(ch.analyst, 18)}
+        <b class="mc-x-id">#${ch.id}</b>
+        <span class="mc-x-p" style="--pc:${priorityColor(ch.pri)}">P${ch.pri}</span>
         <span class="mc-x-h">${fmtNum(ch.hoursMin)}</span>
       </div>
-      <div class="mc-x-t"><b>#${ch.id}</b><span>${esc(ch.title)}</span></div>
-      <span class="mc-x-s" style="--stc:${stc}">${statusLabel[ch.status] || ch.status}</span>
+      <div class="mc-x-t">${esc(ch.title)}</div>
     </div>`;
   }
   return `<div class="mc" style="--c:${ch.c}"><span class="t">${ch.t}</span><span class="tt">#${ch.id} ${esc(ch.title)}</span></div>`;
@@ -550,7 +549,7 @@ function renderMonth(): void {
   const m = store.refDate.getMonth();
   const now = new Date();
   const density = store.prefs.density;
-  const limit = density === "compact" ? 6 : density === "expanded" ? 4 : 3;
+  const limit = density === "compact" ? 6 : 3;
   let html = `<div class="month m-${density}">`;
   for (let i = 0; i < 7; i++) html += `<div class="m-head">${weekdays[i]}</div>`;
   for (const c of monthMatrix(y, m)) {
@@ -598,14 +597,18 @@ function renderMonth(): void {
     const loadPct = capSum > 0 ? Math.min((usedSum / capSum) * 100, 100) : 0;
     html += `<div class="mday ${c.out ? "out" : ""} ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""} ${chips.length ? "" : "empty"}"
                 data-iso="${d.toISOString()}" data-a="" ${c.out ? "" : 'title="Clique para ver este dia"'}>
-        <div class="day-cell-header">
-          <span class="day-number${isToday ? " is-today" : ""}">${d.getDate()}</span>
+        <div class="day-header">
+          <span class="day-number${isToday ? " today-badge" : ""}">${d.getDate()}</span>
         </div>
         <div class="mbody${density === "expanded" ? " day-cell-content" : ""}">`;
     if (c.out) html += '<div class="mc-more"></div>';
     else {
       for (const ch of shown) html += monthChipHtml(ch, density);
-      if (more > 0) html += `<div class="mc more">+${more}</div>`;
+      if (more > 0)
+        html +=
+          density === "expanded"
+            ? `<div class="mc more" title="Clique para ver este dia">Ver todos (${chips.length})</div>`
+            : `<div class="mc more">+${more}</div>`;
       html += '<div class="mc-hint">+</div>';
     }
     html += `</div>
