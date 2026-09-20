@@ -591,7 +591,9 @@ function renderMonth(): void {
     const loadPct = capSum > 0 ? Math.min((usedSum / capSum) * 100, 100) : 0;
     html += `<div class="mday ${c.out ? "out" : ""} ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""} ${chips.length ? "" : "empty"}"
                 data-iso="${d.toISOString()}" data-a="" ${c.out ? "" : 'title="Clique para ver este dia"'}>
-        <span class="mnum">${d.getDate()}</span>
+        <div class="day-cell-header">
+          <span class="day-number${isToday ? " is-today" : ""}">${d.getDate()}</span>
+        </div>
         <div class="mbody">`;
     if (c.out) html += '<div class="mc-more"></div>';
     else {
