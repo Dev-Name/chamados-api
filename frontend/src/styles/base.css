@@ -444,8 +444,11 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
   display: flex; align-items: center; justify-content: center;
 }
 .day-number.is-today {
-  background-color: #2563eb; color: #ffffff;
-  border-radius: 9999px; width: 24px; height: 24px; font-weight: 700;
+  background-color: #2563eb !important; color: #ffffff !important;
+  font-weight: 700 !important;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px;
 }
 .mday.weekend .day-number { color: var(--muted); }
 .mday .mbody { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow: hidden; }
