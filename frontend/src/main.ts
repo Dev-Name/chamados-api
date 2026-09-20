@@ -12,7 +12,7 @@ import { renderKanban, wireKanbanClick } from "./views/kanban";
 import { renderTable } from "./views/table";
 import { renderLoad } from "./views/load";
 import { renderGantt } from "./views/gantt";
-import { applyUiPrefs, wireChrome, showToast, closeAllModals, syncDensityUI, syncWeekendUI } from "./ui/chrome";
+import { applyUiPrefs, wireChrome, showToast, closeAllModals, syncDensityUI, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
 import { wireTicketModal } from "./ui/modals-ticket";
 import { wireAnalystsModal } from "./ui/modals-analyst";
 import { wireQueueModal } from "./ui/modals-queue";
@@ -26,7 +26,7 @@ const GRID_VIEWS = ["day", "week", "month", "year"];
 function updateSummary(): void {
   const bar = document.getElementById("summaryBar");
   if (!bar) return;
-  if (!store.prefs.summary || !GRID_VIEWS.includes(store.view)) {
+  if (!store.prefs.summary) {
     bar.innerHTML = "";
     return;
   }
@@ -201,6 +201,13 @@ function keyboard(e: KeyboardEvent): void {
     return;
   }
   if (e.key === "Escape") {
+    const helpOpen = document.getElementById("helpPop")?.classList.contains("show") ?? false;
+    const legendOpen = document.getElementById("legendPop")?.classList.contains("show") ?? false;
+    if (helpOpen || legendOpen) {
+      if (helpOpen) closeHelp();
+      if (legendOpen) closeLegend();
+      return;
+    }
     if (cancelDrag()) return;
     document.querySelectorAll<HTMLElement>(".band-menu.show").forEach((m) => m.classList.remove("show"));
     return;
@@ -217,7 +224,7 @@ function keyboard(e: KeyboardEvent): void {
   else if (k === "k") setView("kanban");
   else if (k === "t") setView("table");
   else if (k === "c") setView("load");
-  else if (k === "?") document.getElementById("helpPop")?.classList.toggle("show");
+  else if (k === "?") toggleHelp();
   else if (e.key === "ArrowLeft") go(-1);
   else if (e.key === "ArrowRight") go(1);
 }

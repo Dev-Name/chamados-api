@@ -48,12 +48,20 @@ export function toggleBandMenu(id: number | string, btn: HTMLElement): void {
   }
 }
 
-function toggleHelp(): void {
-  document.getElementById("helpPop")?.classList.toggle("show");
+function syncHelpUI(): void {
+  const on = document.getElementById("helpPop")?.classList.contains("show") ?? false;
+  document.getElementById("helpBackdrop")?.classList.toggle("show", on);
+  document.getElementById("helpBtn")?.classList.toggle("on", on);
 }
 
-function closeHelp(): void {
+export function toggleHelp(): void {
+  document.getElementById("helpPop")?.classList.toggle("show");
+  syncHelpUI();
+}
+
+export function closeHelp(): void {
   document.getElementById("helpPop")?.classList.remove("show");
+  syncHelpUI();
 }
 
 function syncLegendLabel(): void {
@@ -62,13 +70,13 @@ function syncLegendLabel(): void {
   if (el && on !== undefined) el.classList.toggle("on", on);
 }
 
-function toggleLegend(): void {
+export function toggleLegend(): void {
   const pop = document.getElementById("legendPop");
   if (pop) pop.classList.toggle("show");
   syncLegendLabel();
 }
 
-function closeLegend(): void {
+export function closeLegend(): void {
   document.getElementById("legendPop")?.classList.remove("show");
   syncLegendLabel();
 }
@@ -105,6 +113,7 @@ export function applyUiPrefs(): void {
   setOn("menuSummary", !!store.prefs.summary);
   const wbtn = document.getElementById("weekendToggle");
   if (wbtn) wbtn.hidden = store.view !== "week" && store.view !== "gantt";
+  syncHelpUI();
   syncLegendLabel();
   syncDensityUI();
   syncWeekendUI();
@@ -140,6 +149,9 @@ export function wireChrome(): void {
     e.stopPropagation();
     toggleHelp();
   });
+  document.getElementById("helpClose")?.addEventListener("click", () => closeHelp());
+  document.getElementById("legendClose")?.addEventListener("click", () => closeLegend());
+  document.getElementById("helpBackdrop")?.addEventListener("click", () => closeHelp());
 
   const themeToggle = document.getElementById("themeToggle");
   if (themeToggle) {

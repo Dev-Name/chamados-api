@@ -118,28 +118,6 @@
       </div>
     </div>
   </div>
-    <div class="help-pop" id="helpPop" role="tooltip">
-      <p><b>O que é isto:</b> o acompanhamento de chamados da equipe. As 8 visões compartilham os mesmos filtros e cores.</p>
-      <ul>
-        <li><b>8 formas de ver:</b> <kbd>D</kbd> dia, <kbd>W</kbd> semana, <kbd>M</kbd> mês, <kbd>A</kbd> ano, <kbd>K</kbd> quadro, <kbd>T</kbd> tabela, <kbd>C</kbd> carga, <kbd>G</kbd> gantt.</li>
-        <li><b>No quadro:</b> arraste um cartão entre colunas para mudar o status; a fila é reprogramada sozinha.</li>
-        <li><b>Criar:</b> clique num espaço vazio no dia/semana, ou em <b>Novo chamado</b>.</li>
-        <li><b>Reagendar:</b> arraste o bloco para outro dia/horário. <b>Ver/editar:</b> clique no bloco.</li>
-        <li><b>Navegar:</b> setas ← → (prev/next), clique em <b>Hoje</b>, ou clique num dia do <b>Mês</b>/<b>Ano</b>.</li>
-        <li><b>Densidade:</b> Compacto / Confortável / Expandido valem para todas as telas (grade, quadro, tabela, carga e gantt).</li>
-        <li><b>Fim de semana:</b> o botão oculta as colunas de sábado e domingo (visões do calendário).</li>
-        <li><b>Urgência:</b> <span class="sw" style="background:var(--p1)"></span> P1 é o mais urgente → <span class="sw" style="background:var(--p5)"></span> P5. Ponto vermelho no bloco = atrasado.</li>
-      </ul>
-      <p><b>Cores e avisos:</b> a cor dos blocos é configurável em <b>Visual</b> (por categoria, urgência ou status). Barra esquerda do bloco = urgência, selo = status. Barra vermelha = atrasado. Linha vermelha = agora.</p>
-    </div>
-    <div class="legend-pop" id="legendPop" role="tooltip">
-      <div class="l-title">Cores da grade</div>
-      <div class="l-row"><span class="sw" style="background:var(--p1)"></span>mais urgente</div>
-      <div class="l-row"><span class="sw" style="background:var(--p5)"></span>menos urgente</div>
-      <div class="l-row"><span class="sw-pat" style="background:repeating-linear-gradient(45deg,var(--out-bg) 0 4px,var(--track) 4px 8px)"></span>fora do expediente</div>
-      <div class="l-row"><span class="l-now"></span>agora</div>
-    </div>
-  </div>
 
   <div class="view-toolbar" id="viewToolbar"></div>
 
@@ -149,6 +127,31 @@
   <div class="view-container" id="viewContainer" hidden></div>
   <div id="err" class="err" hidden></div>
 </main>
+
+<div class="help-backdrop" id="helpBackdrop"></div>
+<div class="help-pop" id="helpPop" role="dialog" aria-modal="true" aria-label="Como funciona">
+  <p><b>O que é isto:</b> o acompanhamento de chamados da equipe. As 8 visões compartilham os mesmos filtros e cores.</p>
+  <ul>
+    <li><b>8 formas de ver:</b> <kbd>D</kbd> dia, <kbd>W</kbd> semana, <kbd>M</kbd> mês, <kbd>A</kbd> ano, <kbd>K</kbd> quadro, <kbd>T</kbd> tabela, <kbd>C</kbd> carga, <kbd>G</kbd> gantt.</li>
+    <li><b>No quadro:</b> arraste um cartão entre colunas para mudar o status; a fila é reprogramada sozinha.</li>
+    <li><b>Criar:</b> clique num espaço vazio no dia/semana, ou em <b>Novo chamado</b>.</li>
+    <li><b>Reagendar:</b> arraste o bloco para outro dia/horário. <b>Ver/editar:</b> clique no bloco.</li>
+    <li><b>Navegar:</b> setas ← → (prev/next), clique em <b>Hoje</b>, ou clique num dia do <b>Mês</b>/<b>Ano</b>.</li>
+    <li><b>Densidade:</b> Compacto / Confortável / Expandido valem para todas as telas (grade, quadro, tabela, carga e gantt).</li>
+    <li><b>Fim de semana:</b> o botão oculta as colunas de sábado e domingo (visões do calendário).</li>
+    <li><b>Urgência:</b> <span class="sw" style="background:var(--p1)"></span> P1 é o mais urgente → <span class="sw" style="background:var(--p5)"></span> P5. Ponto vermelho no bloco = atrasado.</li>
+  </ul>
+  <p><b>Cores e avisos:</b> a cor dos blocos é configurável em <b>Visual</b> (por categoria, urgência ou status). Barra esquerda do bloco = urgência, selo = status. Barra vermelha = atrasado. Linha vermelha = agora.</p>
+  <button class="ghost sm" id="helpClose">Fechar</button>
+</div>
+<div class="legend-pop" id="legendPop" role="dialog" aria-label="Legenda de cores">
+  <div class="l-title">Cores da grade</div>
+  <div class="l-row"><span class="sw" style="background:var(--p1)"></span>mais urgente</div>
+  <div class="l-row"><span class="sw" style="background:var(--p5)"></span>menos urgente</div>
+  <div class="l-row"><span class="sw-pat" style="background:repeating-linear-gradient(45deg,var(--out-bg) 0 4px,var(--track) 4px 8px)"></span>fora do expediente</div>
+  <div class="l-row"><span class="l-now"></span>agora</div>
+  <button class="ghost sm" id="legendClose">Fechar</button>
+</div>
 
 <div class="modal-backdrop" id="ticketModal">
   <div class="modal">
