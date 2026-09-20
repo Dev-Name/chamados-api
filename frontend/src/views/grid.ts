@@ -1,5 +1,5 @@
 import { store, currentZ, statusLabel, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
-import type { Analyst, Ticket } from "../core/state";
+import type { Analyst, Ticket, Density } from "../core/state";
 import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml, weekLabel } from "../core/analysts";
 import { blockColor, priorityColor, segmentsOf, usedMinInDay, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
 import { visibleAnalysts, visibleTicket } from "../core/filters";
@@ -473,6 +473,32 @@ async function recalcOne(id: number): Promise<void> {
 }
 
 // ---------- visão mensal ----------
+interface MonthChip {
+  c: string;
+  t: string;
+  id: number;
+  title: string;
+  pri: number;
+  analyst: Analyst;
+  hoursMin: number;
+}
+
+function monthChipHtml(ch: MonthChip, density: Density): string {
+  const tip = esc(`#${ch.id} ${ch.title}`);
+  if (density === "compact") {
+    return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
+  }
+  if (density === "expanded") {
+    return `<div class="mc mc-x" style="--c:${ch.c}" title="${tip}">
+      ${avatarHtml(ch.analyst, 20)}
+      <span class="xp" style="background:${priorityColor(ch.pri)}">P${ch.pri}</span>
+      <span class="xt">#${ch.id} ${esc(ch.title)}</span>
+      <span class="xh">${fmtNum(ch.hoursMin)}</span>
+    </div>`;
+  }
+  return `<div class="mc" style="--c:${ch.c}"><span class="t">${ch.t}</span><span class="tt">#${ch.id} ${esc(ch.title)}</span></div>`;
+}
+
 function monthMatrix(y: number, m: number): Array<{ d: Date; out: boolean }> {
   const st = new Date(y, m, 1);
   const lead = (st.getDay() + 6) % 7;
@@ -492,14 +518,16 @@ function renderMonth(): void {
   const y = store.refDate.getFullYear();
   const m = store.refDate.getMonth();
   const now = new Date();
-  let html = '<div class="month">';
+  const density = store.prefs.density;
+  const limit = density === "compact" ? 6 : density === "expanded" ? 4 : 3;
+  let html = `<div class="month m-${density}">`;
   for (let i = 0; i < 7; i++) html += `<div class="m-head">${weekdays[i]}</div>`;
   for (const c of monthMatrix(y, m)) {
     const d = c.d;
     const isToday = sameDay(d, now);
     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
     const ais = visibleAnalysts();
-    const chips: Array<{ c: string; t: string; id: number; title: string }> = [];
+    const chips: MonthChip[] = [];
     let usedSum = 0;
     let capSum = 0;
     for (const a of ais) {
@@ -509,16 +537,31 @@ function renderMonth(): void {
       usedSum += usedMinInDay(a, d);
       for (const t of a.tickets) {
         if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
-        let added = false;
+        let matched = false;
+        let mins = 0;
+        let firstFrom = 0;
         for (const seg of segmentsOf(t, a)) {
           if (sameDay(seg.date, d)) {
-            if (!added) chips.push({ c: blockColor(t), t: fmtTime(new Date(seg.date.getTime() + seg.from * 60000)), id: t.id, title: t.title });
-            added = true;
+            if (!matched) firstFrom = seg.from;
+            matched = true;
+            mins += seg.to - seg.from;
           }
+        }
+        if (matched) {
+          chips.push({
+            c: blockColor(t),
+            t: fmtTime(new Date(d.getTime() + firstFrom * 60000)),
+            id: t.id,
+            title: t.title,
+            pri: t.priority,
+            analyst: a,
+            hoursMin: mins,
+          });
         }
       }
     }
-    const shown = chips.slice(0, 3);
+    chips.sort((a, b) => a.pri - b.pri || b.hoursMin - a.hoursMin);
+    const shown = chips.slice(0, limit);
     const more = chips.length - shown.length;
     const loadPct = capSum > 0 ? Math.min((usedSum / capSum) * 100, 100) : 0;
     html += `<div class="mday ${c.out ? "out" : ""} ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""} ${chips.length ? "" : "empty"}"
@@ -527,7 +570,7 @@ function renderMonth(): void {
         <div class="mbody">`;
     if (c.out) html += '<div class="mc-more"></div>';
     else {
-      for (const ch of shown) html += `<div class="mc" style="--c:${ch.c}"><span class="t">${ch.t}</span><span class="tt">#${ch.id} ${esc(ch.title)}</span></div>`;
+      for (const ch of shown) html += monthChipHtml(ch, density);
       if (more > 0) html += `<div class="mc more">+${more}</div>`;
       html += '<div class="mc-hint">+</div>';
     }
@@ -548,21 +591,32 @@ interface MonthStat {
   done: number;
   dayUsed: number[];
   dayCap: number[];
+  byAnalyst: Array<{ id: number; name: string; used: number; cap: number }>;
 }
 
 function monthStat(y: number, m: number): MonthStat {
   const ais = visibleAnalysts();
   const daysIn = new Date(y, m + 1, 0).getDate();
-  const st = { used: 0, cap: 0, active: 0, late: 0, done: 0, dayUsed: [], dayCap: [] } as MonthStat;
+  const st = { used: 0, cap: 0, active: 0, late: 0, done: 0, dayUsed: [], dayCap: [], byAnalyst: [] } as MonthStat;
   const first = new Date(y, m, 1).getTime();
   const last = new Date(y, m + 1, 0).getTime();
+  const byUsed = new Map<number, number>();
+  const byCap = new Map<number, number>();
+  for (const a of ais) {
+    byUsed.set(a.id, 0);
+    byCap.set(a.id, 0);
+  }
   for (let dd = 1; dd <= daysIn; dd++) {
     const d = new Date(y, m, dd);
     let du = 0;
     let dc = 0;
     for (const a of ais) {
-      dc += prodCapOfDow(a, d.getDay());
-      du += usedMinInDay(a, d);
+      const c = prodCapOfDow(a, d.getDay());
+      const u = usedMinInDay(a, d);
+      dc += c;
+      du += u;
+      byCap.set(a.id, (byCap.get(a.id) || 0) + c);
+      byUsed.set(a.id, (byUsed.get(a.id) || 0) + u);
     }
     st.dayUsed.push(du);
     st.dayCap.push(dc);
@@ -582,6 +636,7 @@ function monthStat(y: number, m: number): MonthStat {
       }
     }
   }
+  st.byAnalyst = ais.map((a) => ({ id: a.id, name: a.name, used: byUsed.get(a.id) || 0, cap: byCap.get(a.id) || 0 }));
   return st;
 }
 
@@ -606,18 +661,22 @@ function renderYear(): void {
   const y = store.refDate.getFullYear();
   const now = new Date();
   const ais = visibleAnalysts();
+  const density = store.prefs.density;
 
-  let html = `<div class="year-head">
-      <h2>Análise de ${y}</h2>
-      <div class="year-legend">
+  let html = `<div class="year-head"><h2>Análise de ${y}</h2>`;
+  if (density === "comfort") {
+    html += `<div class="year-legend">
         <span class="yl-item"><i class="yl-s yl-o"></i>Fora do expediente</span>
         <span class="yl-item"><i class="yl-s yl-0"></i>Sem chamados</span>
         <span class="yl-item"><i class="yl-s yl-1"></i>Saudável (&lt;80%)</span>
         <span class="yl-item"><i class="yl-s yl-2"></i>Próximo do limite</span>
         <span class="yl-item"><i class="yl-s yl-3"></i>Sobrecarga (&gt;100%)</span>
       </div>
-      <span class="year-clue">Clique num dia para abrir · passe o mouse para ver os detalhes</span>
-    </div><div class="year">`;
+      <span class="year-clue">Clique num dia para abrir · passe o mouse para ver os detalhes</span>`;
+  } else if (density === "expanded") {
+    html += `<span class="year-clue">Carga por analista e andamento mensal</span>`;
+  }
+  html += `</div><div class="year d-${density}">`;
 
   for (let mm = 0; mm < 12; mm++) {
     const st = monthStat(y, mm);
@@ -628,41 +687,82 @@ function renderYear(): void {
     const mn = new Date(y, mm, 1);
     const monthLabel = cap(mn.toLocaleDateString("pt-BR", { month: "long" }));
 
+    if (density === "compact") {
+      const total = st.active + st.done;
+      html += `<div class="ycard yc-mini">
+        <div class="yc-top"><h3>${monthLabel}</h3></div>
+        <div class="yc-mini-bar"><div class="yc-fill" style="width:${barPct}%"></div></div>
+        <div class="yc-mini-row"><b>${occPct}%</b><span>${total === 1 ? "1 chamado" : total + " chamados"}</span></div>
+      </div>`;
+      continue;
+    }
+
     let heat = "";
-    for (const c of monthMatrix(y, mm)) {
-      if (c.out) {
-        heat += `<div class="yday sp0"></div>`;
-        continue;
-      }
-      const dd = c.d.getDate();
-      const du = st.dayUsed[dd - 1];
-      const dc = st.dayCap[dd - 1];
-      const isToday = sameDay(c.d, now);
-      const cls = dayLoadCls(du, dc);
-      const tipLines = [
-        `${c.d.getDate()} de ${cap(c.d.toLocaleDateString("pt-BR", { month: "long" }))} de ${c.d.getFullYear()}`,
-        du > 0 ? `${fmtNum(du)} alocadas${dc > 0 ? " de " + fmtNum(dc) : ""}` : "sem chamados",
-      ];
-      let listed = 0;
-      for (const a of ais) {
-        for (const t of a.tickets) {
-          if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
-          for (const seg of segmentsOf(t, a)) {
-            if (sameDay(seg.date, c.d)) {
-              if (listed < 4) tipLines.push(`#${t.id} ${t.title}`);
-              listed++;
-              break;
+    if (density === "comfort") {
+      for (const c of monthMatrix(y, mm)) {
+        if (c.out) {
+          heat += `<div class="yday sp0"></div>`;
+          continue;
+        }
+        const dd = c.d.getDate();
+        const du = st.dayUsed[dd - 1];
+        const dc = st.dayCap[dd - 1];
+        const isToday = sameDay(c.d, now);
+        const cls = dayLoadCls(du, dc);
+        const tipLines = [
+          `${c.d.getDate()} de ${cap(c.d.toLocaleDateString("pt-BR", { month: "long" }))} de ${c.d.getFullYear()}`,
+          du > 0 ? `${fmtNum(du)} alocadas${dc > 0 ? " de " + fmtNum(dc) : ""}` : "sem chamados",
+        ];
+        let listed = 0;
+        for (const a of ais) {
+          for (const t of a.tickets) {
+            if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
+            for (const seg of segmentsOf(t, a)) {
+              if (sameDay(seg.date, c.d)) {
+                if (listed < 4) tipLines.push(`#${t.id} ${t.title}`);
+                listed++;
+                break;
+              }
             }
           }
         }
+        if (listed > 4) tipLines.push(`+${listed - 4} outros chamados`);
+        const tip = du > 0 || listed > 0 ? ` data-tip="${esc(tipLines.join("\n"))}"` : "";
+        const off = dc <= 0 && du === 0 ? ' style="background:var(--out-bg)"' : "";
+        heat += `<div class="yday${cls ? " " + cls : ""}${isToday ? " today" : ""}" data-iso="${c.d.toISOString()}"${tip}${off} title="Clique para abrir este dia">${dd}</div>`;
       }
-      if (listed > 4) tipLines.push(`+${listed - 4} outros chamados`);
-      const tip = du > 0 || listed > 0 ? ` data-tip="${esc(tipLines.join("\n"))}"` : "";
-      const off = dc <= 0 && du === 0 ? ' style="background:var(--out-bg)"' : "";
-      heat += `<div class="yday${cls ? " " + cls : ""}${isToday ? " today" : ""}" data-iso="${c.d.toISOString()}"${tip}${off} title="Clique para abrir este dia">${dd}</div>`;
+      html += `<div class="ycard">
+        <div class="yc-top">
+          <h3>${monthLabel}</h3>
+          <span class="yc-badge ${badge.cls}">${badge.txt}</span>
+        </div>
+        <div class="yc-metrics">
+          <span class="yc-k">${fmtNum(st.used)}</span>
+          <span>/ ${fmtNum(st.cap)}</span>
+          <span class="yc-pct">${occPct}%</span>
+        </div>
+        <div class="yc-bar"><div class="yc-fill" style="width:${barPct}%"></div></div>
+        <div class="yc-counts">
+          <span class="yc-c"><b>${st.active}</b> ${st.active === 1 ? "chamado ativo" : "chamados ativos"}</span>
+          <span class="yc-c ${st.late > 0 ? "bad" : ""}"><b>${st.late}</b> ${st.late === 1 ? "atrasado" : "atrasados"}</span>
+          <span class="yc-c ok"><b>${st.done}</b> concluídos</span>
+        </div>
+        <div class="yheat">${heat}</div>
+        <div><button class="ybtn" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">Ver detalhes do mês</button></div>
+      </div>`;
+      continue;
     }
 
-    html += `<div class="ycard">
+    const pending = Math.max(st.active - st.late, 0);
+    const totSeg = st.done + pending + st.late;
+    const wDone = totSeg ? Math.round((st.done / totSeg) * 100) : 0;
+    const wPend = totSeg ? Math.round((pending / totSeg) * 100) : 0;
+    const wLate = totSeg ? (100 - wDone - wPend) : 0;
+    const rows = st.byAnalyst.map((ba) => {
+      const p = ba.cap > 0 ? Math.min(Math.round((ba.used / ba.cap) * 100), 100) : 0;
+      return `<div class="ya-row"><span class="ya-name" title="${esc(ba.name)}">${esc(ba.name)}</span><span class="ya-bar"><i style="width:${p}%"></i></span><span class="ya-val">${fmtNum(ba.used)}</span></div>`;
+    }).join("");
+    html += `<div class="ycard yc-full">
       <div class="yc-top">
         <h3>${monthLabel}</h3>
         <span class="yc-badge ${badge.cls}">${badge.txt}</span>
@@ -673,13 +773,16 @@ function renderYear(): void {
         <span class="yc-pct">${occPct}%</span>
       </div>
       <div class="yc-bar"><div class="yc-fill" style="width:${barPct}%"></div></div>
-      <div class="yc-counts">
-        <span class="yc-c"><b>${st.active}</b> ${st.active === 1 ? "chamado ativo" : "chamados ativos"}</span>
-        <span class="yc-c ${st.late > 0 ? "bad" : ""}"><b>${st.late}</b> ${st.late === 1 ? "atrasado" : "atrasados"}</span>
-        <span class="yc-c ok"><b>${st.done}</b> concluídos</span>
+      <div class="ya-list">${rows}</div>
+      <div class="yc-segbar">
+        <div class="yc-seg">${totSeg ? `<i class="sg ok" style="width:${wDone}%"></i><i class="sg pend" style="width:${wPend}%"></i><i class="sg late" style="width:${wLate}%"></i>` : ""}</div>
+        <div class="yc-seglbl">
+          <span class="ok"><i></i>${st.done} concluídos</span>
+          <span class="pend"><i></i>${pending} pendentes</span>
+          <span class="bad"><i></i>${st.late} atrasados</span>
+        </div>
       </div>
-      <div class="yheat">${heat}</div>
-      <div><button class="ybtn" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">Ver detalhes do mês</button></div>
+      <div><button class="ybtn" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">Gerenciar mês</button></div>
     </div>`;
   }
   html += "</div>";
