@@ -83,11 +83,12 @@ async function main() {
   }
 
   // ---- Kanban ----
-  const viewSelect = doc.getElementById("viewSelect") as HTMLSelectElement | null;
-  if (viewSelect) {
-    viewSelect.value = "kanban";
-    viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  function switchView(view: string): void {
+    const btn = doc.querySelector<HTMLElement>(`#viewSwitch [data-view=${view}]`);
+    btn?.click();
   }
+  switchView("kanban");
+  await sleep(200);
   const kbOk = await waitFor(() => doc.querySelectorAll(".kb-board .kb-card").length > 0);
   check("kanban renderiza cartões arrastáveis", kbOk, doc.querySelectorAll(".kb-card").length + " cartões");
   check("kanban tem 4 colunas de status", doc.querySelectorAll(".kb-col").length === 4, doc.querySelectorAll(".kb-col").length + " colunas");
@@ -101,8 +102,7 @@ async function main() {
   }
 
   // ---- Tabela ----
-  viewSelect.value = "table";
-  viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  switchView("table");
   const tbOk = await waitFor(() => doc.querySelectorAll(".tb tbody tr").length > 0);
   check("tabela renderiza linhas", tbOk, doc.querySelectorAll(".tb tbody tr").length + " linhas");
   check("tabela tem cabeçalho ordenável", doc.querySelectorAll(".tb thead th.tb-sort").length >= 5);
@@ -137,11 +137,9 @@ async function main() {
     const wrong = rowsFiltered.filter((r) => r.dataset.aid && r.dataset.aid !== aid).length;
     check("filtro de analista aplicado na tabela", before > 0 && rowsFiltered.length <= before && wrong === 0, rowsFiltered.length + " de " + before + " linhas");
 
-    viewSelect.value = "load";
-    viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+    switchView("load");
     await sleep(150);
-    viewSelect.value = "table";
-    viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+    switchView("table");
     await sleep(150);
     const rowsBack = [...doc.querySelectorAll<HTMLElement>(".tb tbody tr[data-id]")];
     const wrongBack = rowsBack.filter((r) => r.dataset.aid && r.dataset.aid !== aid).length;
@@ -156,15 +154,13 @@ async function main() {
   }
 
   // ---- Carga ----
-  viewSelect.value = "load";
-  viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  switchView("load");
   const ldOk = await waitFor(() => doc.querySelectorAll(".ld tbody .ld-c").length > 0);
   check("carga renderiza matriz", ldOk, doc.querySelectorAll(".ld tbody .ld-c").length + " células");
   check("carga tem total por analista", doc.querySelectorAll(".ld .ld-sum").length >= 2);
 
   // ---- Gantt ----
-  viewSelect.value = "gantt";
-  viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  switchView("gantt");
   const gtOk = await waitFor(() => doc.querySelectorAll(".gbar").length > 0);
   check("gantt renderiza barras", gtOk, doc.querySelectorAll(".gbar").length + " barras");
   check("gantt tem linhas de analista", doc.querySelectorAll(".g-lane-label").length >= 2);

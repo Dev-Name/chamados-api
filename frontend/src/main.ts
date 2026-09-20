@@ -65,8 +65,6 @@ function setActiveViewTabs(): void {
   document.querySelectorAll<HTMLElement>("#viewSwitch [data-view]").forEach((b) => {
     b.classList.toggle("active", b.dataset.view === store.view);
   });
-  const vs = document.getElementById("viewSelect") as HTMLSelectElement | null;
-  if (vs) vs.value = ["kanban", "table", "load", "gantt"].includes(store.view) ? store.view : "";
 }
 
 function paint(): void {
@@ -118,10 +116,6 @@ function wireTopbar(): void {
   document.querySelectorAll<HTMLElement>("#viewSwitch [data-view]").forEach((b) =>
     b.addEventListener("click", () => setView(b.dataset.view as ViewId))
   );
-  document.getElementById("viewSelect")?.addEventListener("change", (e) => {
-    const v = (e.target as HTMLSelectElement).value;
-    if (v) { setView(v as ViewId); (e.target as HTMLSelectElement).value = ""; }
-  });
   document.getElementById("prev")?.addEventListener("click", () => go(-1));
   document.getElementById("next")?.addEventListener("click", () => go(1));
   document.getElementById("today")?.addEventListener("click", () => {

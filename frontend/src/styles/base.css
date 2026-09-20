@@ -148,9 +148,13 @@ button.ghost { background: transparent; }
 button.danger { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger-text); }
 button.danger:hover { background: var(--danger-soft-hover); }
 button.sm { padding: 5px 9px; font-size: var(--fs-md); }
-.seg { display: inline-flex; background: var(--seg-bg); border-radius: 10px; padding: 3px; gap: 2px; }
-.seg button { border: none; background: transparent; padding: 5px 10px; border-radius: 8px; font-weight: 500; font-size: var(--fs-md); color: var(--muted); }
+.seg { display: inline-flex; align-items: center; background: var(--seg-bg); border-radius: 10px; padding: 3px; gap: 0; }
+.seg button { border: none; background: transparent; padding: 3px 10px; border-radius: 8px; font-weight: 500; font-size: var(--fs-sm); color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.seg button .bi { width: 16px; height: 16px; flex: none; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button:hover { background: var(--hover-strong); color: var(--text); }
 .seg button.active { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
+.seg button.active + button { border-left-color: var(--border); }
 
 main { margin-left: 236px; padding: 14px 20px 70px; transition: margin-left .18s ease; overflow-x: hidden; }
 body.side-min main { margin-left: 60px; }
@@ -187,6 +191,8 @@ body.side-min main { margin-left: 60px; }
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);
   box-shadow: var(--shadow); padding: 6px 10px; margin-bottom: 6px;
 }
+.view-sep { width: 1px; background: var(--border); margin: 0 3px; }
+.bi { width: 16px; height: 16px; flex: none; }
 .toolbar-left { display: inline-flex; align-items: center; gap: 6px; }
 .toolbar-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 .toolbar-select {
