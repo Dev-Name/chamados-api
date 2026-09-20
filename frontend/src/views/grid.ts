@@ -500,7 +500,6 @@ async function recalcOne(id: number): Promise<void> {
 // ---------- visão mensal ----------
 interface MonthChip {
   c: string;
-  sc: string;
   t: string;
   id: number;
   title: string;
@@ -513,18 +512,21 @@ interface MonthChip {
 function monthChipHtml(ch: MonthChip, density: Density): string {
   const tip =
     density === "compact" ? esc(`#${ch.id} ${ch.t} · ${ch.title}`) : esc(`#${ch.id} ${ch.title}`);
+  const initial = esc((ch.analyst.name || "?")[0]);
   if (density === "compact") {
     return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
   }
   if (density === "expanded") {
-    return `<div class="mc mc-x" style="--c:${ch.c};--sc:${ch.sc}" title="${tip}">
-      <div class="mc-x-top">
-        ${avatarHtml(ch.analyst, 16)}
-        <b class="mc-x-id">#${ch.id}</b>
-        <span class="mc-x-p" style="--pc:${priorityColor(ch.pri)}">P${ch.pri}</span>
-        <span class="mc-x-h">${fmtNum(ch.hoursMin)}</span>
+    return `<div class="month-card" title="${tip}">
+      <div class="month-card-row1">
+        <div class="month-card-left">
+          <span class="month-card-av">${initial}</span>
+          <span class="month-card-id">#${ch.id}</span>
+          <span class="month-card-pri">P${ch.pri}</span>
+        </div>
+        <span class="month-card-h">${fmtNum(ch.hoursMin)}</span>
       </div>
-      <div class="mc-x-t">${esc(ch.title)}</div>
+      <div class="month-card-t" title="${esc(ch.title)}">${esc(ch.title)}</div>
     </div>`;
   }
   return `<div class="mc" style="--c:${ch.c}"><span class="t">${ch.t}</span><span class="tt">#${ch.id} ${esc(ch.title)}</span></div>`;
@@ -581,7 +583,6 @@ function renderMonth(): void {
         if (matched) {
           chips.push({
             c: blockColor(t),
-            sc: stColor(t),
             t: fmtTime(new Date(d.getTime() + firstFrom * 60000)),
             id: t.id,
             title: t.title,
@@ -609,7 +610,7 @@ function renderMonth(): void {
       if (more > 0)
         html +=
           density === "expanded"
-            ? `<div class="mc more" title="Clique para ver este dia">Ver todos (${chips.length})</div>`
+            ? `<button class="month-more" type="button">+ ${more} chamados</button>`
             : `<div class="mc more">+${more}</div>`;
       html += '<div class="mc-hint">+</div>';
     }

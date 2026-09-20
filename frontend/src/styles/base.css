@@ -477,35 +477,28 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
   background: color-mix(in srgb, var(--c) 12%, var(--block-mix)); border-left: 3px solid var(--c);
   border-radius: 5px; padding: 1px 5px; white-space: nowrap; overflow: hidden; min-height: 16px;
 }
-.mc .t { color: var(--muted); font-weight: 600; font-size: var(--d-small); flex: none; }
-.mc .tt { overflow: hidden; text-overflow: ellipsis; }
-.mc.more { color: var(--muted); background: transparent; border-left-color: transparent; justify-content: center; }
 .mc-c { min-height: 15px; padding: 1px 4px; gap: 4px; }
 .mc-c .mc-sw { width: 5px; height: 11px; border-radius: 2px; background: var(--c); flex: none; }
 .mc-c b { overflow: hidden; text-overflow: ellipsis; color: var(--text); font-variant-numeric: tabular-nums; }
-.mc-x {
-  min-height: 0; padding: 4px 8px; white-space: normal;
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--panel);
-  border: 1px solid #e2e8f0; border-left: 4px solid var(--sc); border-radius: 6px;
-  line-height: 1.2;
+.mc.more { color: var(--muted); background: transparent; border-left-color: transparent; justify-content: center; }
+/* Cartão padrão do mês expandido */
+.month-card {
+  width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 4px 6px; margin-bottom: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  display: flex; flex-direction: column; gap: 4px; border-left: 4px solid #3b82f6;
 }
-.mc-x-top { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.mc-x .avatar { width: 16px; height: 16px; font-size: 7px; border-radius: 5px; flex: none; }
-.mc-x-id { flex: none; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text); }
-.mc-x-p {
-  flex: none; font-size: 9px; font-weight: 700; line-height: 1; padding: 2px 5px; border-radius: 10px;
-  color: var(--pc); background: color-mix(in srgb, var(--pc) 14%, var(--block-mix));
-  border: 1px solid color-mix(in srgb, var(--pc) 26%, transparent);
-}
-.mc-x-h {
-  margin-left: auto; flex: none; font-size: 11px; font-weight: 600;
-  color: var(--muted); font-variant-numeric: tabular-nums;
-}
-.mc-x-t {
-  font-size: 11px; color: #334155; min-width: 0; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.month-card-row1 { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+.month-card-left { display: flex; align-items: center; gap: 6px; }
+.month-card-av { width: 16px; height: 16px; border-radius: 50%; background: #7c3aed; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex: none; }
+.month-card-id { font-weight: 700; color: #1e293b; }
+.month-card-pri { font-size: 10px; background: #fee2e2; color: #b91c1c; padding: 1px 4px; border-radius: 4px; font-weight: 600; }
+.month-card-h { font-size: 11px; font-weight: 500; color: #64748b; }
+.month-card-t { font-size: 12px; color: #334155; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.month-more { width: 100%; font-size: 12px; color: #2563eb; background: #eff6ff; padding: 4px;
+  border-radius: 4px; border: 1px solid #bfdbfe; cursor: pointer; font-weight: 600;
+  margin-top: 4px; text-align: left; }
+.month-more:hover { background: #dbeafe; }
 .mc-hint {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 22px; color: var(--muted); opacity: 0; transition: opacity .15s; pointer-events: none;
