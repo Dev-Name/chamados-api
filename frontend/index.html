@@ -51,63 +51,69 @@
 
 <main>
   <div class="topbar">
-    <!-- CAMADA 1: Card superior (Resumo + navegação de data) -->
+    <!-- CAMADA 1: Top header em grid 3 colunas -->
     <div class="top-card">
-      <div class="summary" id="summaryBar" hidden></div>
-      <div class="top-nav">
+      <div class="top-left">
+        <span class="period-title" id="weekTitle"></span>
+      </div>
+      <div class="top-center">
         <div class="nav-ctrl">
           <button id="prev" title="Anterior (←)">‹</button>
           <button id="today" title="Voltar para hoje">Hoje</button>
           <button id="next" title="Próximo (→)">›</button>
         </div>
-        <div class="period-title" id="weekTitle"></div>
+      </div>
+      <div class="top-right">
+        <div class="summary" id="summaryBar" hidden></div>
       </div>
     </div>
-    <!-- CAMADA 2: Toolbar única (visões + densidade + opções) -->
+    <!-- CAMADA 2: Toolbar unificada -->
     <div class="toolbar">
-      <div class="views">
+      <div class="toolbar-left">
         <div class="seg" id="viewSwitch" role="tablist">
           <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
           <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>
           <button data-view="month" title="Visão mensal (tecla M)">Mês</button>
           <button data-view="year" title="Visão do ano (tecla A)">Ano</button>
         </div>
-        <div class="seg" id="viewSwitch2" role="tablist">
-          <button data-view="kanban" title="Quadro Kanban com arrastar e soltar (tecla K)">Quadro</button>
-          <button data-view="table" title="Tabela detalhada com edição inline (tecla T)">Tabela</button>
-          <button data-view="load" title="Carga de trabalho (tecla C)">Carga</button>
-          <button data-view="gantt" title="Diagrama de Gantt (tecla G)">Gantt</button>
-        </div>
+        <select id="viewSelect" class="toolbar-select" title="Outras visões">
+          <option value="" disabled selected>Outras Visões ▾</option>
+          <option value="kanban">Quadro</option>
+          <option value="table">Tabela</option>
+          <option value="load">Carga</option>
+          <option value="gantt">Gantt</option>
+        </select>
       </div>
-      <div class="tools">
-        <div class="zoombar" id="densitySeg" title="Densidade global das telas (Ultra-compacto / Confortável / Expandido)">
-          <div class="seg">
-            <button data-density="compact" title="Ultra-compacto: máxima visibilidade de dados">Compacto</button>
-            <button data-density="comfort" class="active" title="Densidade padrão">Confortável</button>
-            <button data-density="expanded" title="Espaçamentos generosos">Expandido</button>
+      <div class="toolbar-right">
+        <select id="densitySelect" class="toolbar-select" title="Densidade">
+          <option value="compact">Densidade: Compacto</option>
+          <option value="comfort" selected>Densidade: Confortável</option>
+          <option value="expanded">Densidade: Expandido</option>
+        </select>
+        <button id="filterToggle" class="active" aria-expanded="true" aria-controls="filterBar" title="Mostrar ou ocultar a barra de filtros">
+          <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span>Filtros</span>
+        </button>
+        <button id="menuSummary" title="Mostrar/ocultar a faixa de estatísticas do topo">
+          <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Resumo</span>
+        </button>
+        <div class="util-menu-wrap">
+          <button id="utilBtn" class="util-btn" title="Mais opções">Mais ▾</button>
+          <div class="util-menu" id="utilMenu">
+            <button id="weekendToggle" aria-pressed="true" title="Mostrar ou ocultar sábado e domingo">
+              <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+              <span>Fim de semana</span>
+            </button>
+            <button id="menuLegend" title="Mostrar/ocultar a legenda de cores">
+              <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <span>Legenda</span>
+            </button>
+            <button id="helpBtn" title="Como funciona esta tela (tecla ?)">
+              <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+              <span>?</span>
+            </button>
           </div>
-        </div>
-        <div class="d-opt">
-          <button id="filterToggle" class="active" aria-expanded="true" aria-controls="filterBar" title="Mostrar ou ocultar a barra de filtros">
-            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            <span>Filtros</span>
-          </button>
-          <button id="weekendToggle" aria-pressed="true" title="Mostrar ou ocultar sábado e domingo">
-            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
-            <span>Fim de semana</span>
-          </button>
-          <button id="menuSummary" title="Mostrar/ocultar a faixa de estatísticas do topo">
-            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            <span>Resumo</span>
-          </button>
-          <button id="menuLegend" title="Mostrar/ocultar a legenda de cores">
-            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>Legenda</span>
-          </button>
-          <button id="helpBtn" title="Como funciona esta tela (tecla ?)">
-            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-            <span>?</span>
-          </button>
         </div>
       </div>
     </div>

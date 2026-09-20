@@ -82,9 +82,8 @@ export function closeLegend(): void {
 }
 
 export function syncDensityUI(): void {
-  document.querySelectorAll<HTMLButtonElement>("#densitySeg [data-density]").forEach((b) => {
-    b.classList.toggle("active", b.dataset.density === store.prefs.density);
-  });
+  const s = document.getElementById("densitySelect") as HTMLSelectElement | null;
+  if (s) s.value = store.prefs.density;
 }
 
 export function syncWeekendUI(): void {
@@ -150,6 +149,18 @@ export function wireChrome(): void {
     e.stopPropagation();
     toggleHelp();
   });
+
+  let utilOpen = false;
+  const utilBtn = document.getElementById("utilBtn");
+  const utilMenu = document.getElementById("utilMenu");
+  const toggleUtil = () => { utilOpen = !utilOpen; if (utilMenu) utilMenu.classList.toggle("show", utilOpen); };
+  utilBtn?.addEventListener("click", (e) => { e.stopPropagation(); toggleUtil(); });
+  document.addEventListener("click", (e) => {
+    if (utilOpen && !(e.target as HTMLElement).closest(".util-menu-wrap")) {
+      utilOpen = false; if (utilMenu) utilMenu.classList.remove("show");
+    }
+  });
+
   document.getElementById("helpClose")?.addEventListener("click", () => closeHelp());
   document.getElementById("legendClose")?.addEventListener("click", () => closeLegend());
   document.getElementById("helpBackdrop")?.addEventListener("click", () => closeHelp());

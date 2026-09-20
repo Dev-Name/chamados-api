@@ -62,9 +62,11 @@ function updateLive(): void {
 }
 
 function setActiveViewTabs(): void {
-  document.querySelectorAll<HTMLElement>("#viewSwitch [data-view], #viewSwitch2 [data-view]").forEach((b) => {
+  document.querySelectorAll<HTMLElement>("#viewSwitch [data-view]").forEach((b) => {
     b.classList.toggle("active", b.dataset.view === store.view);
   });
+  const vs = document.getElementById("viewSelect") as HTMLSelectElement | null;
+  if (vs) vs.value = ["kanban", "table", "load", "gantt"].includes(store.view) ? store.view : "";
 }
 
 function paint(): void {
@@ -113,9 +115,13 @@ async function fullReload(): Promise<void> {
 let qDebounce: ReturnType<typeof setTimeout> | undefined;
 
 function wireTopbar(): void {
-  document.querySelectorAll<HTMLElement>("#viewSwitch [data-view], #viewSwitch2 [data-view]").forEach((b) =>
+  document.querySelectorAll<HTMLElement>("#viewSwitch [data-view]").forEach((b) =>
     b.addEventListener("click", () => setView(b.dataset.view as ViewId))
   );
+  document.getElementById("viewSelect")?.addEventListener("change", (e) => {
+    const v = (e.target as HTMLSelectElement).value;
+    if (v) { setView(v as ViewId); (e.target as HTMLSelectElement).value = ""; }
+  });
   document.getElementById("prev")?.addEventListener("click", () => go(-1));
   document.getElementById("next")?.addEventListener("click", () => go(1));
   document.getElementById("today")?.addEventListener("click", () => {
@@ -149,15 +155,14 @@ function wireTopbar(): void {
     emit();
   });
 
-  document.querySelectorAll<HTMLElement>("#densitySeg [data-density]").forEach((b) =>
-    b.addEventListener("click", () => {
-      store.prefs.density = b.dataset.density as "compact" | "comfort" | "expanded";
-      savePrefs();
-      syncDensityUI();
-      applyUiPrefs();
-      emit();
-    })
-  );
+  document.getElementById("densitySelect")?.addEventListener("change", (e) => {
+    const v = (e.target as HTMLSelectElement).value;
+    store.prefs.density = v as "compact" | "comfort" | "expanded";
+    savePrefs();
+    syncDensityUI();
+    applyUiPrefs();
+    emit();
+  });
   document.getElementById("weekendToggle")?.addEventListener("click", () => {
     store.prefs.showWeekend = !store.prefs.showWeekend;
     savePrefs();

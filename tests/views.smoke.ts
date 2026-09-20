@@ -71,15 +71,23 @@ async function main() {
   }
 
   // densidade
-  const densityBtns = [...doc.querySelectorAll<HTMLButtonElement>("#densitySeg [data-density]")];
-  check("controle de densidade tem 3 opções", densityBtns.length === 3, densityBtns.length + " opções");
-  const compact = doc.querySelector<HTMLButtonElement>("#densitySeg [data-density=compact]");
-  compact?.click();
-  check("densidade compacta aplicada", !!compact?.classList.contains("active"));
+  const densityOpts = [...doc.querySelectorAll<HTMLSelectElement>("#densitySelect option")];
+  check("controle de densidade tem 3 opções", densityOpts.length === 3, densityOpts.length + " opções");
+  const dsel = doc.getElementById("densitySelect") as HTMLSelectElement | null;
+  if (dsel) {
+    dsel.value = "compact";
+    dsel.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+    check("densidade compacta aplicada", dsel.value === "compact");
+  } else {
+    check("controle de densidade existe", false);
+  }
 
   // ---- Kanban ----
-  const kbBtn = doc.querySelector<HTMLElement>("#viewSwitch2 [data-view=kanban]");
-  kbBtn?.click();
+  const viewSelect = doc.getElementById("viewSelect") as HTMLSelectElement | null;
+  if (viewSelect) {
+    viewSelect.value = "kanban";
+    viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  }
   const kbOk = await waitFor(() => doc.querySelectorAll(".kb-board .kb-card").length > 0);
   check("kanban renderiza cartões arrastáveis", kbOk, doc.querySelectorAll(".kb-card").length + " cartões");
   check("kanban tem 4 colunas de status", doc.querySelectorAll(".kb-col").length === 4, doc.querySelectorAll(".kb-col").length + " colunas");
@@ -93,7 +101,8 @@ async function main() {
   }
 
   // ---- Tabela ----
-  doc.querySelector<HTMLElement>("#viewSwitch2 [data-view=table]")?.click();
+  viewSelect.value = "table";
+  viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
   const tbOk = await waitFor(() => doc.querySelectorAll(".tb tbody tr").length > 0);
   check("tabela renderiza linhas", tbOk, doc.querySelectorAll(".tb tbody tr").length + " linhas");
   check("tabela tem cabeçalho ordenável", doc.querySelectorAll(".tb thead th.tb-sort").length >= 5);
@@ -128,9 +137,11 @@ async function main() {
     const wrong = rowsFiltered.filter((r) => r.dataset.aid && r.dataset.aid !== aid).length;
     check("filtro de analista aplicado na tabela", before > 0 && rowsFiltered.length <= before && wrong === 0, rowsFiltered.length + " de " + before + " linhas");
 
-    doc.querySelector<HTMLElement>("#viewSwitch2 [data-view=load]")?.click();
+    viewSelect.value = "load";
+    viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
     await sleep(150);
-    doc.querySelector<HTMLElement>("#viewSwitch2 [data-view=table]")?.click();
+    viewSelect.value = "table";
+    viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
     await sleep(150);
     const rowsBack = [...doc.querySelectorAll<HTMLElement>(".tb tbody tr[data-id]")];
     const wrongBack = rowsBack.filter((r) => r.dataset.aid && r.dataset.aid !== aid).length;
@@ -145,13 +156,15 @@ async function main() {
   }
 
   // ---- Carga ----
-  doc.querySelector<HTMLElement>("#viewSwitch2 [data-view=load]")?.click();
+  viewSelect.value = "load";
+  viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
   const ldOk = await waitFor(() => doc.querySelectorAll(".ld tbody .ld-c").length > 0);
   check("carga renderiza matriz", ldOk, doc.querySelectorAll(".ld tbody .ld-c").length + " células");
   check("carga tem total por analista", doc.querySelectorAll(".ld .ld-sum").length >= 2);
 
   // ---- Gantt ----
-  doc.querySelector<HTMLElement>("#viewSwitch2 [data-view=gantt]")?.click();
+  viewSelect.value = "gantt";
+  viewSelect.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
   const gtOk = await waitFor(() => doc.querySelectorAll(".gbar").length > 0);
   check("gantt renderiza barras", gtOk, doc.querySelectorAll(".gbar").length + " barras");
   check("gantt tem linhas de analista", doc.querySelectorAll(".g-lane-label").length >= 2);
