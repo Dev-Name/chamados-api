@@ -53,8 +53,8 @@
 .cal-wrap.noweek .grid-head,
 .cal-wrap.noweek .band { grid-template-columns: var(--rail) repeat(5, minmax(118px, 1fr)); }
 
-/* nomes/analistas truncados com tooltip completo */
-.band-label .bname .nm { width: 0; flex: 1; }
+/* nomes/analistas truncados com tooltip completo (truncamento só quando não há espaço físico) */
+.band-label .bname .nm { flex: 1 1 auto; min-width: 0; }
 .dhead .ds { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
 /* selos compactos para blocos pequenos */

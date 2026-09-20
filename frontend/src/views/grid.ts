@@ -1,9 +1,9 @@
 import { store, currentZ, statusLabel, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
 import type { Analyst, Ticket, Density } from "../core/state";
-import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml, weekLabel } from "../core/analysts";
+import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml } from "../core/analysts";
 import { blockColor, priorityColor, segmentsOf, usedMinInDay, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
 import { visibleAnalysts, visibleTicket } from "../core/filters";
-import { cap, esc, fmtNum, fmtTime, min2time, sameDay, startOf, fmtHour } from "../core/format";
+import { cap, esc, fmtNum, fmtTime, getCleanName, min2time, sameDay, startOf, fmtHour } from "../core/format";
 import { periodDays } from "../core/nav";
 import { api } from "../core/api";
 import { openTicketModal } from "../ui/modals-ticket";
@@ -14,11 +14,6 @@ import { emit } from "../core/state";
 
 const SHIFT_START = 9;
 
-function cleanDisplayName(name: string): string {
-  const c = name.replace(/\s*\([^)]*(?:smoke|teste?|temp|dev|copia|temp)[^)]*\)\s*$/i, "").trim();
-  return c || name;
-}
-
 function dayBaseStart(d: Date): number {
   const s = visibleAnalysts()
     .filter((a) => capFor(a, d) > 0)
@@ -28,7 +23,7 @@ function dayBaseStart(d: Date): number {
 
 function weekFilteredDays(): Date[] {
   const days = periodDays();
-  if (store.prefs.hideWeekends && store.view === "week") {
+  if (store.prefs.showWeekend === false && store.view === "week") {
     return days.filter((d) => d.getDay() !== 0 && d.getDay() !== 6);
   }
   return days;
@@ -127,7 +122,7 @@ export function renderGrid(): void {
 function renderDayWeek(isDay: boolean): void {
   const calBody = document.getElementById("calBody")!;
   const calWrap = document.getElementById("calWrap")!;
-  calWrap.classList.toggle("noweek", !!store.prefs.hideWeekends && !isDay);
+  calWrap.classList.toggle("noweek", store.prefs.showWeekend === false && !isDay);
   const ais = visibleAnalysts();
   if (!ais.length) {
     calBody.innerHTML = '<div class="empty">Nenhum analista. Adicione em “Analistas”.</div>';
@@ -140,7 +135,7 @@ function renderDayWeek(isDay: boolean): void {
   const z = currentZ();
   const days = isDay ? [startOf(store.refDate)] : weekFilteredDays();
   const nCols = days.length;
-  const rail = "var(--rail)";
+  const rail = "minmax(var(--rail), max-content)";
   const template = isDay ? `${rail} repeat(${Math.max(ais.length, 1)}, minmax(150px, 1fr))` : `${rail} repeat(${nCols}, minmax(118px, 1fr))`;
   const now = new Date();
   const d0 = isDay ? days[0] : null;
@@ -161,7 +156,7 @@ function renderDayWeek(isDay: boolean): void {
       const capM = capFor(a, d);
       const pct = capM > 0 ? Math.round((usedMinInDay(a, d) / capM) * 100) : 0;
       head += `<div class="dhead dhead-day" style="top:0" data-a="${a.id}" title="${esc(a.name)}">
-          <span class="dh-line">${avatarHtml(a, 18)}<span class="dh-name">${esc(cleanDisplayName(a.name))}</span></span>
+          <span class="dh-line">${avatarHtml(a, 18)}<span class="dh-name" title="${esc(getCleanName(a.name))}">${esc(getCleanName(a.name))}</span></span>
           <span class="dh-meta">${activeCount} ${activeCount === 1 ? "chamado" : "chamados"} · ${off ? "folga" : pct + "%"}</span>
         </div>`;
     }
@@ -208,7 +203,7 @@ function renderDayWeek(isDay: boolean): void {
 
       rows += `<div class="grid-row band" id="band-${a.id}" data-a="${a.id}" style="grid-template-columns:${template}">
         <div class="band-label">
-          <span class="bname" title="${esc(weekLabel(a))}">${avatarHtml(a)}<span class="nm" title="${esc(a.name)}">${esc(a.name)}</span>
+          <span class="bname">${avatarHtml(a)}<span class="nm" title="${esc(a.name)}">${esc(getCleanName(a.name))}</span>
             <span class="bmenu-wrap">
               <button class="bmenu" data-menu="${a.id}" title="Ações rápidas">⋮</button>
               <div class="band-menu" id="bmenu-${a.id}">
@@ -805,7 +800,7 @@ function renderYear(): void {
     }
     const rows = st.byAnalyst.map((ba) => {
       const p = ba.cap > 0 ? Math.min(Math.round((ba.used / ba.cap) * 100), 100) : 0;
-      return `<div class="ya-row"><span class="ya-name" title="${esc(ba.name)}">${esc(cleanDisplayName(ba.name))}</span><span class="ya-bar"><i style="width:${p}%"></i></span><span class="ya-val">${fmtNum(ba.used)}</span></div>`;
+      return `<div class="ya-row"><span class="ya-name" title="${esc(ba.name)}">${esc(getCleanName(ba.name))}</span><span class="ya-bar"><i style="width:${p}%"></i></span><span class="ya-val">${fmtNum(ba.used)}</span></div>`;
     }).join("");
     html += `<div class="ycard yc-full hasload" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">
       <div class="yc-top">

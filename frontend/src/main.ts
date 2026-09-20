@@ -5,7 +5,7 @@ import "./styles/views.css";
 import { store, emit, subscribe, savePrefs } from "./core/state";
 import type { ViewId } from "./core/state";
 import { api, loadCategories, loadAnalysts, setReloadHook } from "./core/api";
-import { fillFilterSelects, visibleAnalysts } from "./core/filters";
+import { DEFAULT_FILTERS, fillFilterSelects, visibleAnalysts } from "./core/filters";
 import { periodDays, periodLabel, go, setView } from "./core/nav";
 import { renderGrid, wireGridView, moveNow, cancelDrag } from "./views/grid";
 import { renderKanban, wireKanbanClick } from "./views/kanban";
@@ -127,7 +127,8 @@ function wireTopbar(): void {
   ] as const;
   for (const [id, key] of selMap) {
     document.getElementById(id)?.addEventListener("change", (e) => {
-      store.filters[key] = (e.target as HTMLSelectElement).value;
+      const v = (e.target as HTMLSelectElement).value;
+      store.filters[key] = v === "ALL" ? "" : v;
       emit();
     });
   }
@@ -138,8 +139,9 @@ function wireTopbar(): void {
     qDebounce = setTimeout(emit, 150);
   });
   document.getElementById("f-clear")?.addEventListener("click", () => {
-    store.filters = { analyst: "", category: "0", status: "", priority: "", q: "" };
+    store.filters = { ...DEFAULT_FILTERS };
     if (q) q.value = "";
+    fillFilterSelects();
     emit();
   });
 
@@ -153,7 +155,7 @@ function wireTopbar(): void {
     })
   );
   document.getElementById("weekendToggle")?.addEventListener("click", () => {
-    store.prefs.hideWeekends = !store.prefs.hideWeekends;
+    store.prefs.showWeekend = !store.prefs.showWeekend;
     savePrefs();
     syncWeekendUI();
     emit();

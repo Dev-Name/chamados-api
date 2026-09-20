@@ -54,7 +54,7 @@ export interface Prefs {
   colorBy: ColorBy;
   catColors: Record<string, string>;
   density: Density;
-  hideWeekends: boolean;
+  showWeekend: boolean;
   legend: boolean;
   summary: boolean;
   sideCollapsed: boolean;
@@ -118,7 +118,8 @@ function loadPrefs(): Partial<Prefs> {
     if (typeof raw.legend === "boolean") out.legend = raw.legend;
     if (typeof raw.summary === "boolean") out.summary = raw.summary;
     if (typeof raw.sideCollapsed === "boolean") out.sideCollapsed = raw.sideCollapsed;
-    if (typeof raw.hideWeekends === "boolean") out.hideWeekends = raw.hideWeekends;
+    if (typeof raw.showWeekend === "boolean") out.showWeekend = raw.showWeekend;
+    else if (typeof raw.hideWeekends === "boolean") out.showWeekend = !raw.hideWeekends;
     if (raw.density === "compact" || raw.density === "comfort" || raw.density === "expanded") {
       out.density = raw.density;
     } else if (typeof raw.zoom === "number") {
@@ -161,7 +162,7 @@ export const store: StoreShape = {
       colorBy: "category" as ColorBy,
       catColors: {} as Record<string, string>,
       density: "comfort" as Density,
-      hideWeekends: false,
+      showWeekend: true,
       legend: false,
       summary: true,
       sideCollapsed: false,

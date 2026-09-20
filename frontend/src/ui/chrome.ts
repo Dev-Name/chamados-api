@@ -89,10 +89,11 @@ export function syncDensityUI(): void {
 
 export function syncWeekendUI(): void {
   const b = document.getElementById("weekendToggle");
-  const hidden = !!store.prefs.hideWeekends;
+  const on = !!store.prefs.showWeekend;
   if (b) {
-    b.classList.toggle("on", hidden);
-    b.title = hidden ? "Mostrar sábado e domingo (ativo)" : "Ocultar sábado e domingo";
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+    b.title = on ? "Ocultar sábado e domingo (fim de semana visível)" : "Mostrar sábado e domingo";
   }
 }
 

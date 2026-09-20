@@ -262,8 +262,8 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 
 /* ---------- grade semanal / diária ---------- */
 .grid-row { display: grid; }
-.grid-head { grid-template-columns: var(--rail) repeat(7, minmax(118px, 1fr)); }
-.grid-head-day { grid-template-columns: var(--rail) repeat(6, minmax(150px, 1fr)); }
+.grid-head { grid-template-columns: minmax(var(--rail), max-content) repeat(7, minmax(118px, 1fr)); }
+.grid-head-day { grid-template-columns: minmax(var(--rail), max-content) repeat(6, minmax(150px, 1fr)); }
 .lbl, .dhead {
   position: sticky; z-index: 8; background: var(--panel); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
   padding: 5px 6px; font-weight: 700; font-size: var(--fs-sm); display: flex; flex-direction: column; justify-content: flex-start; gap: 1px;
@@ -291,8 +291,8 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
   font-size: var(--d-small); line-height: 17px; font-weight: 700; letter-spacing: .2px; flex: none;
 }
 
-.band { grid-template-columns: var(--rail) repeat(7, minmax(118px, 1fr)); }
-.band.dayband { grid-template-columns: var(--rail) repeat(7, minmax(150px, 1fr)); }
+.band { grid-template-columns: minmax(var(--rail), max-content) repeat(7, minmax(118px, 1fr)); }
+.band.dayband { grid-template-columns: minmax(var(--rail), max-content) repeat(7, minmax(150px, 1fr)); }
 .band-label {
   position: sticky; left: 0; z-index: 7; background: var(--panel);
   border-right: 1px solid var(--border); padding: 8px 10px;
@@ -557,8 +557,8 @@ html[data-theme="dark"] .yb-over { color: #f87171; }
 .yc-full:hover .yc-arrow { color: var(--primary); transform: translateX(2px); }
 .yc-empty-msg { font-size: var(--fs-sm); color: var(--muted); }
 .ya-list { display: flex; flex-direction: column; gap: 3px; }
-.ya-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--fs-sm); color: var(--muted); }
-.ya-name { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ya-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; font-size: var(--fs-sm); color: var(--muted); }
+.ya-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .ya-bar { height: 5px; border-radius: 3px; background: var(--track); overflow: hidden; }
 .ya-bar i { display: block; height: 100%; background: var(--primary); border-radius: 3px; }
 .ya-val { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }

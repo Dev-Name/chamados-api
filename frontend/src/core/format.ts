@@ -51,6 +51,11 @@ export function fmtNum(m: number): string {
   return s + "h";
 }
 
+export function getCleanName(name: string): string {
+  const c = name.replace(/\s*\([^)]*(?:smoke|teste?|temp|dev|copia|homolog|stage|qa)[^)]*\)\s*$/i, "").trim();
+  return c || name;
+}
+
 export function min2time(m: number): string {
   return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(Math.round(m % 60)).padStart(2, "0");
 }
