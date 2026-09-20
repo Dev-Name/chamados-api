@@ -57,7 +57,7 @@ function updateLive(): void {
   const el = document.getElementById("liveText");
   if (el) {
     const d = new Date();
-    el.textContent = "ao vivo · " + d.toLocaleTimeString("pt-BR");
+    el.textContent = d.toLocaleTimeString("pt-BR");
   }
 }
 
@@ -72,7 +72,11 @@ function paint(): void {
   applyUiPrefs();
   setActiveViewTabs();
   const title = document.getElementById("weekTitle");
-  if (title) title.textContent = periodLabel();
+  if (title) {
+    title.innerHTML =
+      `<svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>` +
+      `<span>${periodLabel()}</span>`;
+  }
   updateSummary();
   const wrap = document.getElementById("calWrap")!;
   const container = document.getElementById("viewContainer")!;
