@@ -52,27 +52,30 @@
 <main>
   <div class="topbar">
     <div class="tb-main">
-      <div class="seg" id="viewSwitch" role="tablist">
-        <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
-        <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>
-        <button data-view="month" title="Visão mensal (tecla M)">Mês</button>
-        <button data-view="year" title="Visão do ano (tecla A)">Ano</button>
-      </div>
-      <div class="seg" id="viewSwitch2" role="tablist">
-        <button data-view="kanban" title="Quadro Kanban com arrastar e soltar (tecla K)">Quadro</button>
-        <button data-view="table" title="Tabela detalhada com edição inline (tecla T)">Tabela</button>
-        <button data-view="load" title="Carga de trabalho (tecla C)">Carga</button>
-        <button data-view="gantt" title="Diagrama de Gantt (tecla G)">Gantt</button>
-      </div>
-      <div class="tb-center">
-        <div class="nav-ctrl">
-          <button id="prev" title="Anterior (←)">‹</button>
-          <button id="today" title="Voltar para hoje">Hoje</button>
-          <button id="next" title="Próximo (→)">›</button>
+      <div class="th-row1">
+        <div class="seg" id="viewSwitch" role="tablist">
+          <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
+          <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>
+          <button data-view="month" title="Visão mensal (tecla M)">Mês</button>
+          <button data-view="year" title="Visão do ano (tecla A)">Ano</button>
         </div>
-        <div class="period-title" id="weekTitle"></div>
+        <div class="seg" id="viewSwitch2" role="tablist">
+          <button data-view="kanban" title="Quadro Kanban com arrastar e soltar (tecla K)">Quadro</button>
+          <button data-view="table" title="Tabela detalhada com edição inline (tecla T)">Tabela</button>
+          <button data-view="load" title="Carga de trabalho (tecla C)">Carga</button>
+          <button data-view="gantt" title="Diagrama de Gantt (tecla G)">Gantt</button>
+        </div>
+        <div class="summary" id="summaryBar" hidden></div>
+        <div class="th-right">
+          <div class="nav-ctrl">
+            <button id="prev" title="Anterior (←)">‹</button>
+            <button id="today" title="Voltar para hoje">Hoje</button>
+            <button id="next" title="Próximo (→)">›</button>
+          </div>
+          <div class="period-title" id="weekTitle"></div>
+        </div>
       </div>
-      <div class="tb-controls">
+      <div class="th-row2">
         <div class="zoombar" id="densitySeg" title="Densidade global das telas (Ultra-compacto / Confortável / Expandido)">
           <div class="seg">
             <button data-density="compact" title="Ultra-compacto: máxima visibilidade de dados">Compacto</button>
@@ -103,11 +106,7 @@
           </button>
         </div>
       </div>
-    </div>
-    <div class="sum-wrap" id="sumWrap">
-      <div class="summary" id="summaryBar"></div>
-    </div>
-    <div class="tb-filters open" id="filterBar">
+      <div class="tb-filters open" id="filterBar">
       <div class="tb-filters-in">
         <select id="f-analyst" title="Filtrar por analista"></select>
         <select id="f-category" title="Filtrar por categoria"></select>
@@ -115,6 +114,7 @@
         <select id="f-priority" title="Filtrar por prioridade"></select>
         <input id="f-q" type="search" placeholder="Buscar por título ou #id...">
         <button id="f-clear" class="ghost sm" title="Limpar filtros">Limpar</button>
+      </div>
       </div>
     </div>
   </div>

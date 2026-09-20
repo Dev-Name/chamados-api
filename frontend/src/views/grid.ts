@@ -500,6 +500,7 @@ async function recalcOne(id: number): Promise<void> {
 // ---------- visão mensal ----------
 interface MonthChip {
   c: string;
+  sc: string;
   t: string;
   id: number;
   title: string;
@@ -516,9 +517,9 @@ function monthChipHtml(ch: MonthChip, density: Density): string {
     return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
   }
   if (density === "expanded") {
-    return `<div class="mc mc-x" style="--c:${ch.c}" title="${tip}">
+    return `<div class="mc mc-x" style="--c:${ch.c};--sc:${ch.sc}" title="${tip}">
       <div class="mc-x-top">
-        ${avatarHtml(ch.analyst, 18)}
+        ${avatarHtml(ch.analyst, 16)}
         <b class="mc-x-id">#${ch.id}</b>
         <span class="mc-x-p" style="--pc:${priorityColor(ch.pri)}">P${ch.pri}</span>
         <span class="mc-x-h">${fmtNum(ch.hoursMin)}</span>
@@ -580,6 +581,7 @@ function renderMonth(): void {
         if (matched) {
           chips.push({
             c: blockColor(t),
+            sc: stColor(t),
             t: fmtTime(new Date(d.getTime() + firstFrom * 60000)),
             id: t.id,
             title: t.title,
