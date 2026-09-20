@@ -509,7 +509,8 @@ interface MonthChip {
 }
 
 function monthChipHtml(ch: MonthChip, density: Density): string {
-  const tip = esc(`#${ch.id} ${ch.title}`);
+  const tip =
+    density === "compact" ? esc(`#${ch.id} ${ch.t} · ${ch.title}`) : esc(`#${ch.id} ${ch.title}`);
   if (density === "compact") {
     return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
   }
@@ -602,7 +603,7 @@ function renderMonth(): void {
       html += '<div class="mc-hint">+</div>';
     }
     html += `</div>
-        ${c.out ? "" : capSum > 0 ? `<div class="mload"><div class="tr"><i style="width:${loadPct}%"></i></div><b>${fmtNum(Math.min(usedSum, capSum))}</b></div>` : ""}
+        ${c.out ? "" : usedSum > 0 ? `<div class="mload"><div class="tr"><i style="width:${loadPct}%"></i></div><b>${fmtNum(Math.min(usedSum, capSum))}</b></div>` : ""}
       </div>`;
   }
   html += "</div>";

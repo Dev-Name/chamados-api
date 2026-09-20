@@ -39,7 +39,7 @@ html[data-density="compact"] {
   --d-title: 9.5px;
   --d-small: 8.5px;
   --d-bar: 11px;
-  --d-mday: 100px;
+  --d-mday: 60px;
   --d-tile: 6px;
 }
 html[data-density="expanded"] {
@@ -420,6 +420,12 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 
 /* ---------- mês ---------- */
 .month { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }
+.month.m-compact { gap: 2px; }
+.month.m-compact .m-head { padding: 4px; font-size: var(--fs-sm); }
+.month.m-compact .mday { padding: 4px; }
+.month.m-compact .day-cell-header { padding: 0; }
+.month.m-compact .mbody { gap: 1px; }
+.month.m-compact .mc-c { min-height: 13px; padding: 0 4px; }
 .m-head { padding: 8px; text-align: center; font-weight: 700; font-size: var(--fs-md); color: var(--muted); letter-spacing: .2px; border: 1px solid var(--border); background: var(--panel); }
 .mday {
   min-height: var(--d-mday); border: 1px solid var(--border); background: var(--panel); padding: 5px 6px;
