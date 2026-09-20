@@ -1,0 +1,67 @@
+/* ============ GridView: refinamentos ============ */
+
+/* hierarquia visual: borda esquerda = urgência (P1..P5), selo = status,
+   fundo/tinta = cor configurável (categoria por padrão) */
+.blk {
+  border: 1px solid color-mix(in srgb, var(--c) 30%, var(--block-mix));
+  border-left: 3px solid var(--prc);
+  background: color-mix(in srgb, var(--c) 16%, var(--block-mix));
+}
+.blk.late {
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--block-mix));
+  border-left: 3px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 13%, var(--block-mix));
+}
+.bt-pill {
+  background: color-mix(in srgb, var(--prc) 20%, var(--block-mix));
+  border: 1px solid color-mix(in srgb, var(--prc) 55%, transparent);
+  color: color-mix(in srgb, var(--prc) 88%, var(--text));
+}
+.bt-alert { width: 7px; height: 7px; }
+
+/* selo de status: cor do status, sempre visível para leitura rápida */
+.st-badge {
+  flex: none; font-size: 8.5px; font-weight: 800; letter-spacing: .25px; line-height: 1.5;
+  padding: 0 5px; border-radius: 20px; white-space: nowrap;
+  color: color-mix(in srgb, var(--stc) 85%, var(--text));
+  background: color-mix(in srgb, var(--stc) 16%, var(--block-mix));
+  border: 1px solid color-mix(in srgb, var(--stc) 30%, transparent);
+}
+
+/* expansão suave no hover: o título/meta deixam de cortar e o cartão "cresce"
+   sobre o conteúdo seguinte com fundo sólido */
+.blk { transition: top .3s cubic-bezier(.2, .7, .3, 1), height .3s, opacity .25s, box-shadow .15s, z-index 0s; }
+.blk:hover {
+  z-index: 20; overflow: visible;
+  background: var(--block-mix);
+  box-shadow: 0 10px 26px rgba(16, 24, 40, .18);
+  outline: 1px solid color-mix(in srgb, var(--prc) 45%, transparent);
+  cursor: grab;
+}
+.blk.tiny:hover .bt-title,
+.blk:hover .bt-title,
+.blk:hover .bt-meta {
+  white-space: normal; overflow: visible; text-overflow: clip;
+}
+.blk.tiny:hover { padding: 5px 8px 5px 9px; }
+
+/* quebra de linha mais confortável quando expandido */
+.blk:hover .bt-title { min-height: 0; }
+
+/* grade com fins de semana ocultos: os cabeçalhos seguem o fluxo (5 colunas). */
+.cal-wrap.noweek .inner { min-width: 620px; }
+.cal-wrap.noweek .grid-head,
+.cal-wrap.noweek .band { grid-template-columns: var(--rail) repeat(5, minmax(118px, 1fr)); }
+
+/* nomes/analistas truncados com tooltip completo */
+.band-label .bname .nm { width: 0; flex: 1; }
+.dhead .ds { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* selos compactos para blocos pequenos */
+.blk.tiny.hascade { }
+.blk.tiny { display: flex; align-items: center; gap: 4px; }
+.blk.tiny .bt-title { flex: 1; }
+.blk.tiny .st-badge { display: none; }
+
+/* bloco em destaque ao selecionar */
+.blk.sel { outline: 2px solid var(--primary); outline-offset: -2px; }

@@ -1,0 +1,39 @@
+
+> chamados-api@1.0.0 test
+> npm run test:smoke && npm run test:create && npm run test:analyst && npm run test:page && npm run test:api
+
+
+> chamados-api@1.0.0 test:smoke
+> tsx tests/calendar.smoke.ts
+
+
+20 passaram, 0 falharam
+
+> chamados-api@1.0.0 test:create
+> tsx tests/analyst-create.smoke.ts
+
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    }
+  ]
+}

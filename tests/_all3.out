@@ -1,0 +1,45 @@
+
+> chamados-api@1.0.0 test
+> npm run test:smoke && npm run test:create && npm run test:analyst && npm run test:page && npm run test:api
+
+
+> chamados-api@1.0.0 test:smoke
+> tsx tests/calendar.smoke.ts
+
+
+20 passaram, 0 falharam
+
+> chamados-api@1.0.0 test:create
+> tsx tests/analyst-create.smoke.ts
+
+1/5 antes: 2 analistas | ids: [1,2]
+2/5 POST: 201 | id: 27 | nome: Cadastro Smoke Temporario | sab(min): 240 | createOk: true
+3/5 GET(pos): Cadastro Smoke Temporario | sab(min): 240 | nameOk: true | satOk: true
+4/5 DELETE + GET -> len: 2 | sem id 27: true
+5/5 FLUXO DE CADASTRO DE ANALISTA OK (POST 201 persistiu, DELETE removeu, idempotente e restaurativo)
+
+> chamados-api@1.0.0 test:analyst
+> tsx tests/analyst-edit.smoke.ts
+
+1/5 orig: Ana Ribeiro (smoke temp) | sab(min): 480
+2/5 PATCH-> Ana Ribeiro (smoke temp) | sab(min): 240
+3/5 apos: Ana Ribeiro (smoke temp) | sab: 240 | nameOk: true | sabOk: true
+4/5 restaurado: Ana Ribeiro (smoke temp) | sab: 480 | restored: true
+5/5 FLUXO DE EDICAO DE ANALISTA OK (persistiu + restaurou, idempotente)
+
+> chamados-api@1.0.0 test:page
+> tsx tests/page.smoke.ts
+
+  Relatórios: Uso da semana por dia | Carga restante por analista | Chamados ativos por prioridade | Capacidade — semana vigente | Carga por categoria (chamados ativos)
+Página renderizou: 2 analistas, 9 blocos de chamado
+   Seg 8,5h · Ter 8h · Qua 8h · Qui 8h · Sex 4h · Sáb 8h · Dom 8,5h
+   3 chamado(s) · 51% da semana
+   Seg 6h · Ter 6h · Qua 6h · Qui 6h · Sex 6h · Sáb 5h
+   2 chamado(s) · 40% da semana
+  Resumo: 5chamados ativos41,0hde trabalho previsto0atrasados47%da capacidade ocupada
+Teste de frontend OK
+
+> chamados-api@1.0.0 test:api
+> tsx tests/api.smoke.ts
+
+API + workedMinutes OK (#2: 2026-09-19T19:00:00.000Z → 2026-09-19T17:00:00.000Z → restaurado)

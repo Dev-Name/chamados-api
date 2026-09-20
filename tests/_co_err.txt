@@ -1,0 +1,1 @@
+FALHOU: listagem compacta nao abriu no modal 0 linhas

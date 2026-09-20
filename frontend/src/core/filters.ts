@@ -1,0 +1,46 @@
+import type { Analyst, Ticket } from "./state";
+import { statusLabel, store } from "./state";
+
+export function visibleAnalysts(): Analyst[] {
+  const sel = Number(store.filters.analyst);
+  return store.analysts.filter((a) => !store.filters.analyst || a.id === sel);
+}
+
+export function visibleTicket(t: Ticket): boolean {
+  if (store.filters.status && t.status !== store.filters.status) return false;
+  if (store.filters.priority && t.priority !== Number(store.filters.priority)) return false;
+  if (store.filters.category && store.filters.category !== "0" && Number(store.filters.category) !== t.category.id) return false;
+  if (store.filters.q) {
+    const q = store.filters.q.toLowerCase();
+    if (!`#${t.id} ${t.title}`.toLowerCase().includes(q)) return false;
+  }
+  return true;
+}
+
+export function fillFilterSelects(): void {
+  const opts: Record<string, Array<string[]>> = {
+    "f-analyst": [["", "Todos os analistas"], ...store.analysts.map((a) => [String(a.id), a.name])],
+    "f-category": [["0", "Todas as categorias"], ...store.categories.map((c) => [String(c.id), c.name])],
+    "f-status": [["", "Todos os status"], ...Object.entries(statusLabel)],
+    "f-priority": [["", "Todas as prioridades"], ...[1, 2, 3, 4, 5].map((p) => [String(p), "P" + p])],
+  };
+  for (const id of Object.keys(opts)) {
+    const sel = document.getElementById(id) as HTMLSelectElement | null;
+    if (!sel) continue;
+    const prev = store.filters[id as "analyst" | "category" | "status" | "priority"];
+    sel.innerHTML = "";
+    for (const [v, label] of opts[id]) {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = label;
+      sel.appendChild(o);
+    }
+    sel.value = opts[id].some(([v]) => String(v) === String(prev)) ? String(prev) : opts[id][0][0];
+  }
+}
+
+export function categoriesFromTickets(): Array<{ id: number; name: string }> {
+  const map = new Map<number, { id: number; name: string }>();
+  for (const a of store.analysts) for (const t of a.tickets) map.set(t.category.id, t.category);
+  return [...map.values()];
+}

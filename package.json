@@ -1,0 +1,51 @@
+{
+  "name": "chamados-api",
+  "version": "1.0.0",
+  "description": "API de controle de demandas/chamados com motor de recalculo de prazos por analista",
+  "main": "dist/index.js",
+  "scripts": {
+    "predev": "npm run build:ui",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "build:ui": "node scripts/build-ui.mjs",
+    "prestart": "npm run build:ui",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "test:smoke": "tsx tests/calendar.smoke.ts",
+    "test:create": "tsx tests/analyst-create.smoke.ts",
+    "test:analyst": "tsx tests/analyst-edit.smoke.ts",
+    "test:page": "tsx tests/page.smoke.ts",
+    "test:views": "tsx tests/views.smoke.ts",
+    "test:api": "tsx tests/api.smoke.ts",
+    "test": "npm run build:ui && npm run test:smoke && npm run test:create && npm run test:analyst && npm run test:page && npm run test:views && npm run test:api",
+    "typecheck": "tsc --noEmit && tsc -p frontend --noEmit"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
+  "keywords": [
+    "chamados",
+    "demandas",
+    "prisma",
+    "express",
+    "typescript"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^22.10.2",
+    "jsdom": "^30.0.1",
+    "prisma": "^5.22.0",
+    "puppeteer-core": "^25.11.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

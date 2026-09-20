@@ -1,0 +1,91 @@
+// Schema do sistema de controle de demandas/chamados
+// Banco: PostgreSQL | Provider: postgresql
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TicketStatus {
+  BACKLOG     // Aguardando na fila
+  IN_PROGRESS // Em andamento
+  PAUSED      // Pausado (conta como ocupado na fila)
+  COMPLETED   // Finalizado (não participa do recálculo)
+}
+
+model Analyst {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  // Foto opcional do analista (data URI base64 de imagem)
+  photo                String?
+  // Capacidade diária de trabalho em minutos por dia da semana,
+  // usando getDay() do JS (0=Dom, 1=Seg, ..., 6=Sáb). 0 = dia sem expediente.
+  weeklyCapacityMinutes Int[]   @default([0, 480, 480, 480, 480, 480, 0])
+  // Horário de início do expediente por dia da semana em minutos desde a meia-noite
+  // (ex.: 540 = 09:00), espelhando weeklyCapacityMinutes. [] = não configurado -> 09:00.
+  // -1 dentro do array = sem expediente naquele dia.
+  weeklyStartMinutes    Int[]   @default([])
+  // Horário do almoço em minutos desde a meia-noite (ex.: 720 = 12:00). null = sem almoço configurado.
+  lunchStartMinutes    Int?
+  lunchEndMinutes      Int?
+  // Almoço por dia da semana (7 valores, 0=Dom..6=Sáb), espelhando weeklyCapacityMinutes.
+  // null dentro do array = sem intervalo naquele dia. null no próprio campo = usa o par legado acima.
+  // Default [] (esvaziado) — Prisma não aceita array default com null; o valor semântico
+  // é tratado pelo código (null implícito por dia).
+  weeklyLunchStartMinutes Int[] @default([])
+  weeklyLunchEndMinutes   Int[] @default([])
+  // Capacidade diária de trabalho em minutos (referência/label; usado para
+  // compatibilidade quando weeklyCapacityMinutes não é informado no payload)
+  dailyCapacityMinutes Int      @default(480)
+  // Dias úteis da semana usando getDay() do JS (0=Dom, 1=Seg, ..., 6=Sáb)
+  workDays             Int[]
+  tickets              Ticket[]
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("analysts")
+}
+
+model Category {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  tickets Ticket[]
+  createdAt DateTime @default(now())
+
+  @@map("categories")
+}
+
+model Ticket {
+  id               Int          @id @default(autoincrement())
+  title            String
+  categoryId       Int
+  category         Category     @relation(fields: [categoryId], references: [id])
+  // Analista responsável; opcional (filas sem dono ficam de fora do recálculo)
+  analystId        Int?
+  analyst          Analyst?     @relation(fields: [analystId], references: [id])
+  // Tempo estimado (em minutos) para finalizar o chamado
+  estimatedMinutes Int
+  // Tempo já trabalhado (em minutos); o motor agenda o tempo RESTANTE
+  workedMinutes    Int      @default(0)
+  // Prioridade numérica: quanto MENOR o valor, MAIS prioritário (ordenado ASC)
+  priority         Int          @default(5)
+  status           TicketStatus @default(BACKLOG)
+  // Auto-relacionamento de dependência técnica: este chamado só inicia após o apontado
+  dependsOnTicketId Int?
+  dependsOn        Ticket?      @relation("TicketDependency", fields: [dependsOnTicketId], references: [id])
+  dependentTickets Ticket[]     @relation("TicketDependency")
+  // Ordem de entrada na fila (menor = mais antigo/primeiro)
+  position         Int          @default(0)
+  // Campos de planejamento preenchidos/recalculados pelo motor de tempo
+  startDate        DateTime?
+  dueDate          DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([analystId, status, priority, position])
+  @@map("tickets")
+}

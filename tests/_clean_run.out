@@ -1,0 +1,5 @@
+1/5 orig: Ana Ribeiro (smoke temp) | sab(min): 240
+2/5 PATCH-> Ana Ribeiro (smoke temp) | sab(min): 240
+3/5 apos: Ana Ribeiro (smoke temp) | sab: 240 | nameOk: true | sabOk: true
+4/5 restaurado: Ana Ribeiro (smoke temp) | sab: 240 | restored: true
+5/5 FLUXO DE EDICAO DE ANALISTA OK (persistiu + restaurou, idempotente)

@@ -1,0 +1,4 @@
+1/5 orig: Ana Ribeiro | sab(min): 480
+TypeError: Cannot read properties of undefined (reading 'name')
+    at main (C:\xampp\htdocs\chamados-api\tests\analyst-edit.smoke.ts:62:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
