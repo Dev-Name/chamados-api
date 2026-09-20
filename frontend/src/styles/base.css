@@ -87,7 +87,7 @@ header {
 }
 .side-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .side-head .titles { flex: 1; min-width: 0; }
-.side-head .app-name { font-size: 14px; font-weight: 700; letter-spacing: -.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-head .app-name { font-size: 14px; font-weight: 700; letter-spacing: -.1px; white-space: nowrap; }
 .side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; margin: 0 -4px; padding: 0 4px; padding-bottom: 8px; }
 .side-nav .m-item {
   border: none; background: none; text-align: left; width: 100%;
@@ -172,7 +172,7 @@ body.side-min main { margin-left: 60px; }
 .top-card {
   display: flex; justify-content: space-between; align-items: center;
   width: 100%; background: var(--panel); border: 1px solid var(--border);
-  border-radius: var(--rad); box-shadow: var(--shadow); padding: 8px 12px;
+  border-radius: var(--rad); box-shadow: var(--shadow); padding: 10px 16px;
   margin-bottom: 6px;
 }
 .top-card .summary:not([hidden]) { display: flex; align-items: center; gap: 16px; min-width: 0; }

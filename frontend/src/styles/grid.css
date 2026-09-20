@@ -1,16 +1,18 @@
 /* ============ GridView: refinamentos ============ */
 
-/* hierarquia visual: borda esquerda = urgência (P1..P5), selo = status,
-   fundo/tinta = cor configurável (categoria por padrão) */
+/* hierarquia visual: barra esquerda = urgência (P1..P5), selo = status,
+   fundo neutro com sombra discreta para acabamento moderno */
 .blk {
-  border: 1px solid color-mix(in srgb, var(--c) 30%, var(--block-mix));
+  border: 1px solid var(--border);
   border-left: 3px solid var(--prc);
-  background: color-mix(in srgb, var(--c) 16%, var(--block-mix));
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
 .blk.late {
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--block-mix));
+  border: 1px solid var(--border);
   border-left: 3px solid var(--danger);
-  background: color-mix(in srgb, var(--danger) 13%, var(--block-mix));
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
 .bt-pill {
   background: color-mix(in srgb, var(--prc) 20%, var(--block-mix));
