@@ -679,8 +679,9 @@ function dayLoadCls(used: number, cap: number): string {
   return "yd-3";
 }
 
-function monthBadge(occ: number, cap: number): { cls: string; txt: string } {
+function monthBadge(occ: number, cap: number, used: number): { cls: string; txt: string } {
   if (cap <= 0) return { cls: "yb-none", txt: "Sem expediente" };
+  if (used <= 0) return { cls: "yb-none", txt: "Sem alocação" };
   if (occ >= 1) return { cls: "yb-over", txt: "Sobrecarga" };
   if (occ >= 0.8) return { cls: "yb-warn", txt: "Atenção" };
   return { cls: "yb-ok", txt: "Saudável" };
@@ -711,7 +712,7 @@ function renderYear(): void {
   for (let mm = 0; mm < 12; mm++) {
     const st = monthStat(y, mm);
     const occ = st.cap > 0 ? st.used / st.cap : st.used > 0 ? 9 : 0;
-    const badge = monthBadge(occ, st.cap);
+    const badge = monthBadge(occ, st.cap, st.used);
     const occPct = Math.round(occ * 100);
     const barPct = Math.min(occPct, 100);
     const mn = new Date(y, mm, 1);
@@ -719,7 +720,7 @@ function renderYear(): void {
 
     if (density === "compact") {
       const total = st.active + st.done;
-      html += `<div class="ycard yc-mini">
+      html += `<div class="ycard yc-mini" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">
         <div class="yc-top"><h3>${monthLabel}</h3></div>
         <div class="yc-mini-bar"><div class="yc-fill" style="width:${barPct}%"></div></div>
         <div class="yc-mini-row"><b>${occPct}%</b><span>${total === 1 ? "1 chamado" : total + " chamados"}</span></div>
@@ -729,6 +730,7 @@ function renderYear(): void {
 
     let heat = "";
     if (density === "comfort") {
+      heat = `<div class="yhd">${weekdays.map((w) => `<span title="${w}">${w}</span>`).join("")}</div>`;
       for (const c of monthMatrix(y, mm)) {
         if (c.out) {
           heat += `<div class="yday sp0"></div>`;
@@ -788,14 +790,27 @@ function renderYear(): void {
     const wDone = totSeg ? Math.round((st.done / totSeg) * 100) : 0;
     const wPend = totSeg ? Math.round((pending / totSeg) * 100) : 0;
     const wLate = totSeg ? (100 - wDone - wPend) : 0;
+    const hasLoad = st.used > 0 || st.done + st.active > 0;
+    const chevron = `<svg class="yc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
+    const topRight = `<span class="yc-top-r"><span class="yc-badge ${badge.cls}">${badge.txt}</span>${chevron}</span>`;
+    if (!hasLoad) {
+      html += `<div class="ycard yc-full" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">
+        <div class="yc-top">
+          <h3>${monthLabel}</h3>
+          ${topRight}
+        </div>
+        <div class="yc-empty-msg">${fmtNum(st.used)} alocadas</div>
+      </div>`;
+      continue;
+    }
     const rows = st.byAnalyst.map((ba) => {
       const p = ba.cap > 0 ? Math.min(Math.round((ba.used / ba.cap) * 100), 100) : 0;
-      return `<div class="ya-row"><span class="ya-name" title="${esc(ba.name)}">${esc(ba.name)}</span><span class="ya-bar"><i style="width:${p}%"></i></span><span class="ya-val">${fmtNum(ba.used)}</span></div>`;
+      return `<div class="ya-row"><span class="ya-name" title="${esc(ba.name)}">${esc(cleanDisplayName(ba.name))}</span><span class="ya-bar"><i style="width:${p}%"></i></span><span class="ya-val">${fmtNum(ba.used)}</span></div>`;
     }).join("");
-    html += `<div class="ycard yc-full">
+    html += `<div class="ycard yc-full hasload" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">
       <div class="yc-top">
         <h3>${monthLabel}</h3>
-        <span class="yc-badge ${badge.cls}">${badge.txt}</span>
+        ${topRight}
       </div>
       <div class="yc-metrics">
         <span class="yc-k">${fmtNum(st.used)}</span>
@@ -812,7 +827,6 @@ function renderYear(): void {
           <span class="bad"><i></i>${st.late} atrasados</span>
         </div>
       </div>
-      <div><button class="ybtn" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">Gerenciar mês</button></div>
     </div>`;
   }
   html += "</div>";
