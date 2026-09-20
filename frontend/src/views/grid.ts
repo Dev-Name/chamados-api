@@ -3,7 +3,7 @@ import type { Analyst, Ticket, Density } from "../core/state";
 import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml, weekLabel } from "../core/analysts";
 import { blockColor, priorityColor, segmentsOf, usedMinInDay, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
 import { visibleAnalysts, visibleTicket } from "../core/filters";
-import { cap, esc, fmtDay, fmtNum, fmtTime, min2time, sameDay, startOf, fmtHour } from "../core/format";
+import { cap, esc, fmtNum, fmtTime, min2time, sameDay, startOf, fmtHour } from "../core/format";
 import { periodDays } from "../core/nav";
 import { api } from "../core/api";
 import { openTicketModal } from "../ui/modals-ticket";
@@ -13,6 +13,18 @@ import { showToast, toggleBandMenu } from "../ui/chrome";
 import { emit } from "../core/state";
 
 const SHIFT_START = 9;
+
+function cleanDisplayName(name: string): string {
+  const c = name.replace(/\s*\([^)]*(?:smoke|teste?|temp|dev|copia|temp)[^)]*\)\s*$/i, "").trim();
+  return c || name;
+}
+
+function dayBaseStart(d: Date): number {
+  const s = visibleAnalysts()
+    .filter((a) => capFor(a, d) > 0)
+    .map((a) => startForDow(a, d.getDay()));
+  return s.length ? Math.min(...s) : SHIFT_START * 60;
+}
 
 function weekFilteredDays(): Date[] {
   const days = periodDays();
@@ -36,15 +48,13 @@ function hourMarkup(capMinutes: number, startMin: number): string {
   return lines;
 }
 
-function dayCellHtml(a: Analyst, d: Date, dayH: number, now: Date, isDay: boolean): string {
-  void isDay;
+function dayCellHtml(a: Analyst, d: Date, dayH: number, now: Date, startMin: number, showHours: boolean): string {
   const cap = capFor(a, d);
   if (cap <= 0) {
     return `<div class="day idle" style="height:${dayH}px" data-a="${a.id}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
   let lines = "";
-  const startMin = startForDow(a, d.getDay());
-  lines += hourMarkup(cap, startMin);
+  if (showHours) lines += hourMarkup(cap, startMin);
   const lunch = lunchForDow(a, d.getDay());
   if (lunch) {
     const lt = (lunch.start - startMin) * currentZ();
@@ -63,8 +73,8 @@ function dayCellHtml(a: Analyst, d: Date, dayH: number, now: Date, isDay: boolea
             </div>`;
 }
 
-function placeBlock(band: HTMLElement, segDate: Date, top: number, height: number, t: Ticket): void {
-  const cell = band.querySelector<HTMLElement>('.day[data-iso="' + new Date(segDate).toISOString() + '"]');
+function placeBlock(band: HTMLElement, segDate: Date, top: number, height: number, t: Ticket, analystId: number, segFrom: number, segTo: number): void {
+  const cell = band.querySelector<HTMLElement>(`.day[data-iso="${new Date(segDate).toISOString()}"][data-a="${analystId}"]`);
   if (!cell) return;
   const color = blockColor(t);
   const prc = priorityColor(t.priority);
@@ -73,6 +83,7 @@ function placeBlock(band: HTMLElement, segDate: Date, top: number, height: numbe
   const remain = remainOf(t);
   const pct = pctDone(t);
   const late = isOverdue(t);
+  const durPart = worked > 0 ? "faltam " + fmtNum(remain) : fmtNum(t.estimatedMinutes);
   const catName =
     store.prefs.colorBy === "priority" ? "P" + t.priority : store.prefs.colorBy === "status" ? statusLabel[t.status] || t.status : t.category.name;
   const dep = t.dependsOn ? `\n⛓ depende do chamado #${t.dependsOn.id}` : "";
@@ -83,8 +94,8 @@ function placeBlock(band: HTMLElement, segDate: Date, top: number, height: numbe
   const blk = document.createElement("div");
   blk.className = "blk" + (height < 24 ? " tiny" : "") + (late ? " late" : "");
   blk.dataset.id = String(t.id);
-  blk.style.top = top + "px";
-  blk.style.height = height + "px";
+  blk.style.top = Math.max(top + 1, 0) + "px";
+  blk.style.height = Math.max(height - 2, 4) + "px";
   blk.style.left = "0";
   blk.style.width = "100%";
   blk.style.setProperty("--c", color);
@@ -95,7 +106,7 @@ function placeBlock(band: HTMLElement, segDate: Date, top: number, height: numbe
     `<div class="bt-top"><span class="bt-title">#${t.id} ${esc(t.title)}</span><span class="bt-pill">P${t.priority}</span>` +
     `<span class="st-badge">${statusLabel[t.status] || t.status}</span>` +
     `${late ? '<span class="bt-alert" title="Atrasado"></span>' : ""}</div>` +
-    `<div class="bt-meta">${worked > 0 ? "faltam " + fmtNum(remain) : fmtNum(t.estimatedMinutes)} • ${fmtTime(t.startDate)}–${fmtTime(t.dueDate)}</div>` +
+    `<div class="bt-meta">${durPart} · ${min2time(segFrom)}–${min2time(segTo)}</div>` +
     (worked > 0 ? `<div class="bt-progress"><div class="bt-bar" style="width:${pct}%"></div></div>` : "");
   cell.appendChild(blk);
 }
@@ -127,22 +138,31 @@ function renderDayWeek(isDay: boolean): void {
     ...store.analysts.map((a) => Math.max(...WEEK_DOW.map((dow) => capFor(a, new Date(2026, 0, 4 + dow)))))
   );
   const z = currentZ();
-  const dayH = Math.max((maxCap / 60) * 60 * z, 180);
   const days = isDay ? [startOf(store.refDate)] : weekFilteredDays();
   const nCols = days.length;
   const rail = "var(--rail)";
   const template = isDay ? `${rail} repeat(${Math.max(ais.length, 1)}, minmax(150px, 1fr))` : `${rail} repeat(${nCols}, minmax(118px, 1fr))`;
   const now = new Date();
+  const d0 = isDay ? days[0] : null;
+  const baseStart = d0 ? dayBaseStart(d0) : SHIFT_START * 60;
+  const dayEnd =
+    isDay && d0
+      ? ais.reduce((mx, a) => (capFor(a, d0) > 0 ? Math.max(mx, startForDow(a, d0.getDay()) + capFor(a, d0)) : mx), baseStart + 60)
+      : baseStart + 60;
+  const dayH = isDay ? Math.max((dayEnd - baseStart) * z, 180) : Math.max((maxCap / 60) * 60 * z, 180);
 
   let head = `<div class="grid-row grid-head${isDay ? " grid-head-day" : ""}" style="grid-template-columns:${template}">
       <div class="lbl" style="top:0;left:0">Horas</div>`;
   if (isDay) {
     const d = days[0];
     for (const a of ais) {
-      const isOff = capFor(a, d) <= 0;
-      head += `<div class="dhead" style="top:0">
-          <span class="dd">${cap(weekdays[(d.getDay() + 6) % 7])}, ${fmtDay(d)}</span>
-          <span class="ds" title="${esc(a.name)}">${esc(a.name)}${isOff ? " • sem expediente" : ""}</span>
+      const off = capFor(a, d) <= 0;
+      const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
+      const capM = capFor(a, d);
+      const pct = capM > 0 ? Math.round((usedMinInDay(a, d) / capM) * 100) : 0;
+      head += `<div class="dhead dhead-day" style="top:0" data-a="${a.id}" title="${esc(a.name)}">
+          <span class="dh-line">${avatarHtml(a, 18)}<span class="dh-name">${esc(cleanDisplayName(a.name))}</span></span>
+          <span class="dh-meta">${activeCount} ${activeCount === 1 ? "chamado" : "chamados"} · ${off ? "folga" : pct + "%"}</span>
         </div>`;
     }
   } else {
@@ -168,18 +188,25 @@ function renderDayWeek(isDay: boolean): void {
   head += "</div>";
 
   let rows = "";
-  for (const a of ais) {
-    const workDays = days.filter((d) => capFor(a, d) > 0);
-    const freeAvail = workDays.reduce((s, d) => s + prodCapOfDow(a, d.getDay()), 0);
-    const usageAll = workDays.length
-      ? { used: workDays.reduce((s, d) => s + usedMinInDay(a, d), 0), avail: freeAvail }
-      : null;
-    const pct = usageAll ? Math.round((usageAll.used / usageAll.avail) * 100) : 0;
-    const wkColor = !usageAll ? "" : usageAll.used / usageAll.avail < 0.6 ? "#059669" : usageAll.used / usageAll.avail < 0.85 ? "#d97706" : "#dc2626";
-    const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
-    const dayTotal = workDays.reduce((s, d) => s + usedMinInDay(a, d), 0);
+  if (isDay) {
+    const d = days[0];
+    rows = `<div class="grid-row band dayband" data-day="${d.toISOString()}" style="grid-template-columns:${template}">
+        <div class="day-ruler" style="height:${dayH}px">${hourMarkup(dayEnd - baseStart, baseStart)}</div>`;
+    for (const a of ais) rows += dayCellHtml(a, d, dayH, now, baseStart, false);
+    rows += "</div>";
+  } else {
+    for (const a of ais) {
+      const workDays = days.filter((d) => capFor(a, d) > 0);
+      const freeAvail = workDays.reduce((s, d) => s + prodCapOfDow(a, d.getDay()), 0);
+      const usageAll = workDays.length
+        ? { used: workDays.reduce((s, d) => s + usedMinInDay(a, d), 0), avail: freeAvail }
+        : null;
+      const pct = usageAll ? Math.round((usageAll.used / usageAll.avail) * 100) : 0;
+      const wkColor = !usageAll ? "" : usageAll.used / usageAll.avail < 0.6 ? "#059669" : usageAll.used / usageAll.avail < 0.85 ? "#d97706" : "#dc2626";
+      const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
+      const dayTotal = workDays.reduce((s, d) => s + usedMinInDay(a, d), 0);
 
-    rows += `<div class="grid-row band${isDay ? " dayband" : ""}" id="band-${a.id}" data-a="${a.id}" style="grid-template-columns:${template}">
+      rows += `<div class="grid-row band" id="band-${a.id}" data-a="${a.id}" style="grid-template-columns:${template}">
         <div class="band-label">
           <span class="bname" title="${esc(weekLabel(a))}">${avatarHtml(a)}<span class="nm" title="${esc(a.name)}">${esc(a.name)}</span>
             <span class="bmenu-wrap">
@@ -194,18 +221,15 @@ function renderDayWeek(isDay: boolean): void {
           ${usageAll ? `<span class="bcap wk" style="color:${wkColor}" title="Ocupado: ${fmtNum(dayTotal)} · disponível: ${fmtNum(usageAll.avail)}">${activeCount} chamado(s) · ${pct}%</span>` : ""}
         </div>`;
 
-    if (isDay) {
-      rows += dayCellHtml(a, days[0], dayH, now, isDay);
-    } else {
-      for (const d of days) rows += dayCellHtml(a, d, dayH, now, isDay);
+      for (const d of days) rows += dayCellHtml(a, d, dayH, now, startForDow(a, d.getDay()), true);
+      rows += "</div>";
     }
-    rows += "</div>";
   }
 
   calBody.innerHTML = head + rows;
 
   for (const a of ais) {
-    const band = document.getElementById("band-" + a.id) as HTMLElement | null;
+    const band = isDay ? calBody.querySelector<HTMLElement>(".dayband") : document.getElementById("band-" + a.id);
     if (!band) continue;
     for (const t of a.tickets) {
       if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
@@ -213,14 +237,17 @@ function renderDayWeek(isDay: boolean): void {
         if (capFor(a, seg.date) <= 0) continue;
         const inRange = days.some((d) => sameDay(d, seg.date));
         if (!inRange) continue;
-        const startMin = startForDow(a, seg.date.getDay());
+        const startMin = isDay ? baseStart : startForDow(a, seg.date.getDay());
         let top = (seg.from - startMin) * z;
         let bottom = (seg.to - startMin) * z;
         if (bottom <= 0) continue;
         const cap = capFor(a, seg.date);
         if (bottom > cap * z) bottom = cap * z;
         if (top < 0) top = 0;
-        placeBlock(band, seg.date, top, Math.max(bottom - top, 4), t);
+        const shiftEnd = startForDow(a, seg.date.getDay()) + cap;
+        const wFrom = Math.min(Math.max(seg.from, startForDow(a, seg.date.getDay())), shiftEnd);
+        const wTo = Math.min(Math.max(seg.to, startForDow(a, seg.date.getDay())), shiftEnd);
+        placeBlock(band, seg.date, top, Math.max(bottom - top, 4), t, a.id, wFrom, wTo);
       }
     }
   }
@@ -236,7 +263,8 @@ export function installNowLines(): void {
   calBody.querySelectorAll<HTMLElement>(".day.todayCell").forEach((cell) => {
     cell.querySelectorAll(".now-line").forEach((l) => l.remove());
     const a = store.analysts.find((x) => String(x.id) === cell.dataset.a);
-    const startMin = a ? startForDow(a, new Date(cell.dataset.iso || "").getDay()) : SHIFT_START * 60;
+    const cellDate = new Date(cell.dataset.iso || "");
+    const startMin = store.view === "day" ? dayBaseStart(cellDate) : a ? startForDow(a, cellDate.getDay()) : SHIFT_START * 60;
     const top = (mn - startMin) * z;
     if (top < 0) return;
     const line = document.createElement("div");
@@ -255,7 +283,9 @@ export function moveNow(): void {
   calBody.querySelectorAll<HTMLElement>(".now-line").forEach((el) => {
     const cell = el.closest<HTMLElement>(".day");
     const a = cell ? store.analysts.find((x) => String(x.id) === cell.dataset.a) : null;
-    const startMin = a && cell ? startForDow(a, new Date(cell.dataset.iso || "").getDay()) : SHIFT_START * 60;
+    const cellDate = cell ? new Date(cell.dataset.iso || "") : null;
+    const startMin =
+      cell && cellDate ? store.view === "day" ? dayBaseStart(cellDate) : a ? startForDow(a, cellDate.getDay()) : SHIFT_START * 60 : SHIFT_START * 60;
     const top = (mn - startMin) * z;
     const inShift = top >= 0 && !!cell;
     el.style.display = inShift ? "" : "none";
@@ -320,7 +350,7 @@ function dragStart(e: PointerEvent, blk: HTMLElement): void {
   blk.classList.add("src");
   drag.active = true;
   drag.id = Number(blk.dataset.id);
-  drag.bandId = Number(blk.closest(".band")?.getAttribute("data-a"));
+  drag.bandId = Number(blk.closest(".band")?.getAttribute("data-a")) || Number((blk.closest(".day") as HTMLElement | null)?.dataset.a) || null;
   drag.ghost = ghost;
   drag.src = blk;
   drag.moved = false;
@@ -344,7 +374,7 @@ function dragMove(e: PointerEvent): void {
   const cell = under ? (under.closest(".day") as HTMLElement | null) : null;
   const band = drag.src ? drag.src.closest(".band") : null;
   if (drag.lastCell && drag.lastCell !== cell) drag.lastCell.classList.remove("drop");
-  if (cell && band && cell.closest(".band") === band) {
+  if (cell && band && cell.closest(".band") === band && String(drag.bandId) === (cell.dataset.a || "")) {
     cell.classList.add("drop");
     drag.lastCell = cell;
   } else {
@@ -386,7 +416,7 @@ function dragEnd(e: PointerEvent): void {
   const z = currentZ();
   const relMin = Math.max(0, (e.clientY - r.top) / z);
   const target = new Date(cell.dataset.iso || "");
-  const minOfDayAt = startForDow(a, target.getDay()) + Math.round(relMin / 15) * 15;
+  const minOfDayAt = (store.view === "day" ? dayBaseStart(target) : startForDow(a, target.getDay())) + Math.round(relMin / 15) * 15;
   target.setMinutes(minOfDayAt, 0, 0);
   const order = desiredOrder(a, t, target.getTime());
   lastDragAt = Date.now();
