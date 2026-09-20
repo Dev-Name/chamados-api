@@ -26,10 +26,6 @@ const GRID_VIEWS = ["day", "week", "month", "year"];
 function updateSummary(): void {
   const bar = document.getElementById("summaryBar");
   if (!bar) return;
-  if (!store.prefs.summary) {
-    bar.innerHTML = "";
-    return;
-  }
   const days = periodDays();
   let active = 0;
   let late = 0;
