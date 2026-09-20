@@ -99,8 +99,8 @@ export function syncWeekendUI(): void {
 
 export function applyUiPrefs(): void {
   document.documentElement.dataset.density = store.prefs.density;
-  const sumWrap = document.getElementById("sumWrap");
-  if (sumWrap) sumWrap.classList.toggle("show", !!store.prefs.summary);
+  const sb = document.getElementById("summaryBar");
+  if (sb) sb.hidden = !store.prefs.summary;
   const side = document.getElementById("side");
   if (side) side.classList.toggle("min", !!store.prefs.sideCollapsed);
   document.body.classList.toggle("side-min", !!store.prefs.sideCollapsed);

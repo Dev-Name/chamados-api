@@ -51,8 +51,21 @@
 
 <main>
   <div class="topbar">
-    <div class="tb-main">
-      <div class="th-row1">
+    <!-- CAMADA 1: Card superior (Resumo + navegação de data) -->
+    <div class="top-card">
+      <div class="summary" id="summaryBar" hidden></div>
+      <div class="top-nav">
+        <div class="nav-ctrl">
+          <button id="prev" title="Anterior (←)">‹</button>
+          <button id="today" title="Voltar para hoje">Hoje</button>
+          <button id="next" title="Próximo (→)">›</button>
+        </div>
+        <div class="period-title" id="weekTitle"></div>
+      </div>
+    </div>
+    <!-- CAMADA 2: Toolbar única (visões + densidade + opções) -->
+    <div class="toolbar">
+      <div class="views">
         <div class="seg" id="viewSwitch" role="tablist">
           <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
           <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>
@@ -65,17 +78,8 @@
           <button data-view="load" title="Carga de trabalho (tecla C)">Carga</button>
           <button data-view="gantt" title="Diagrama de Gantt (tecla G)">Gantt</button>
         </div>
-        <div class="summary" id="summaryBar" hidden></div>
-        <div class="th-right">
-          <div class="nav-ctrl">
-            <button id="prev" title="Anterior (←)">‹</button>
-            <button id="today" title="Voltar para hoje">Hoje</button>
-            <button id="next" title="Próximo (→)">›</button>
-          </div>
-          <div class="period-title" id="weekTitle"></div>
-        </div>
       </div>
-      <div class="th-row2">
+      <div class="tools">
         <div class="zoombar" id="densitySeg" title="Densidade global das telas (Ultra-compacto / Confortável / Expandido)">
           <div class="seg">
             <button data-density="compact" title="Ultra-compacto: máxima visibilidade de dados">Compacto</button>
@@ -106,7 +110,9 @@
           </button>
         </div>
       </div>
-      <div class="tb-filters open" id="filterBar">
+    </div>
+    <!-- CAMADA 3: Barra de Filtros -->
+    <div class="tb-filters open" id="filterBar">
       <div class="tb-filters-in">
         <select id="f-analyst" title="Filtrar por analista"></select>
         <select id="f-category" title="Filtrar por categoria"></select>
@@ -114,7 +120,6 @@
         <select id="f-priority" title="Filtrar por prioridade"></select>
         <input id="f-q" type="search" placeholder="Buscar por título ou #id...">
         <button id="f-clear" class="ghost sm" title="Limpar filtros">Limpar</button>
-      </div>
       </div>
     </div>
   </div>

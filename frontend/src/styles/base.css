@@ -166,24 +166,30 @@ body.side-min main { margin-left: 60px; }
 }
 .sum-chip b { font-size: var(--fs-md); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
 .sum-chip.bad b { color: var(--danger); }
-.th-row1 .summary:not([hidden]) {
-  display: flex; align-items: center; gap: 16px; min-width: 0;
-  margin-left: 6px; padding-left: 14px; border-left: 1px solid var(--border);
-}
 
-/* Header em card único: Linha 1 (visões + resumo inline + data), Linha 2 (opções), Filtros retráteis */
+/* Camada 1: Card superior (Resumo inline + navegação de data) */
 .topbar { position: relative; margin-bottom: 10px; }
-.tb-main {
+.top-card {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--rad); box-shadow: var(--shadow); padding: 8px 12px;
+  margin-bottom: 6px;
+}
+.top-card .summary:not([hidden]) { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.top-card .top-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.top-card .period-title { flex: 0 1 auto; min-width: 0; margin: 0; }
+
+/* Camada 2: Toolbar única (visões + densidade + opções na mesma linha) */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; gap: 6px 14px;
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);
-  box-shadow: var(--shadow); padding: 8px 12px; min-width: 0;
+  box-shadow: var(--shadow); padding: 6px 10px; margin-bottom: 6px;
 }
-.th-row1 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; min-width: 0; }
-.th-row2 {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px;
-  justify-content: space-between; margin-top: 6px; padding-top: 6px;
-  border-top: 1px solid var(--border); min-width: 0;
-}
-.th-right { display: flex; align-items: center; gap: 6px; margin-inline-start: auto; min-width: 0; }
+.toolbar .views { display: inline-flex; align-items: center; gap: 4px; }
+.toolbar .tools { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+
+/* Camada 3: Filtros (isenta abaixo da toolbar) */
 .topbar select { max-width: 165px; }
 .tb-filters {
   display: grid; grid-template-rows: 0fr; opacity: 0;
@@ -239,7 +245,6 @@ body.side-min main { margin-left: 60px; }
 }
 .period-title .pt-ic { width: 16px; height: 16px; color: var(--muted); flex: none; }
 .period-title span { overflow: hidden; text-overflow: ellipsis; }
-.tb-center .period-title { flex: 0 1 auto; min-width: 0; margin: 0; }
 .zoombar { display: flex; align-items: center; gap: 4px; }
 .zoombar b { font-size: var(--fs-sm); color: var(--muted); min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
 .zoombar.hidden { display: none; }
