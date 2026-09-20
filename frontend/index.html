@@ -50,10 +50,8 @@
 </header>
 
 <main>
-  <div class="summary" id="summaryBar"></div>
-
   <div class="topbar">
-    <div class="tb-top">
+    <div class="tb-main">
       <div class="seg" id="viewSwitch" role="tablist">
         <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
         <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>
@@ -66,39 +64,60 @@
         <button data-view="load" title="Carga de trabalho (tecla C)">Carga</button>
         <button data-view="gantt" title="Diagrama de Gantt (tecla G)">Gantt</button>
       </div>
-      <div class="nav-ctrl">
-        <button id="prev" class="ghost sm" title="Anterior (←)">‹</button>
-        <button id="today" class="ghost sm" title="Voltar para hoje">Hoje</button>
-        <button id="next" class="ghost sm" title="Próximo (→)">›</button>
+      <div class="tb-center">
+        <div class="nav-ctrl">
+          <button id="prev" class="ghost sm" title="Anterior (←)">‹</button>
+          <button id="today" class="ghost sm" title="Voltar para hoje">Hoje</button>
+          <button id="next" class="ghost sm" title="Próximo (→)">›</button>
+        </div>
+        <div class="period-title" id="weekTitle"></div>
       </div>
-      <div class="period-title" id="weekTitle"></div>
+      <div class="tb-controls">
+        <div class="zoombar" id="densitySeg" title="Densidade global das telas (Ultra-compacto / Confortável / Expandido)">
+          <div class="seg">
+            <button data-density="compact" title="Ultra-compacto: máxima visibilidade de dados">Compacto</button>
+            <button data-density="comfort" class="active" title="Densidade padrão">Confortável</button>
+            <button data-density="expanded" title="Espaçamentos generosos">Expandido</button>
+          </div>
+        </div>
+        <div class="d-opt">
+          <button id="weekendToggle" title="Mostrar ou ocultar sábado e domingo">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+            <span>Fim de semana</span>
+          </button>
+          <button id="filterToggle" class="active" aria-expanded="true" aria-controls="filterBar" title="Mostrar ou ocultar a barra de filtros">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span>Filtros</span>
+          </button>
+          <button id="menuSummary" title="Mostrar/ocultar a faixa de estatísticas do topo">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span>Resumo</span>
+          </button>
+          <button id="menuLegend" title="Mostrar/ocultar a legenda de cores">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <span>Legenda</span>
+          </button>
+          <button id="helpBtn" title="Como funciona esta tela (tecla ?)">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            <span>?</span>
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="tb-bottom" id="filterBar">
+    <div class="sum-wrap" id="sumWrap">
+      <div class="summary" id="summaryBar"></div>
+    </div>
+    <div class="tb-filters open" id="filterBar">
+      <div class="tb-filters-in">
+        <select id="f-analyst" title="Filtrar por analista"></select>
         <select id="f-category" title="Filtrar por categoria"></select>
         <select id="f-status" title="Filtrar por status"></select>
         <select id="f-priority" title="Filtrar por prioridade"></select>
         <input id="f-q" type="search" placeholder="Buscar por título ou #id...">
         <button id="f-clear" class="ghost sm" title="Limpar filtros">Limpar</button>
       </div>
-      <div class="tbl-end">
-        <div class="zoombar" id="densitySeg" title="Densidade global das telas (Compacto / Confortável / Expandido)">
-          <div class="seg">
-            <button data-density="compact" title="Telas mais compactas">Compacto</button>
-            <button data-density="comfort" class="active" title="Densidade padrão">Confortável</button>
-            <button data-density="expanded" title="Telas mais espaçadas">Expandido</button>
-          </div>
-        </div>
-        <button id="weekendToggle" class="ghost sm" title="Mostrar ou ocultar sábado e domingo">Fim de semana: oculto</button>
-        <button id="filterToggle" class="ghost sm active" title="Mostrar ou ocultar a barra de filtros (tecla F)">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1.5 3h13"/><path d="M4 8h8"/><path d="M6.5 13h3"/></svg> Filtros
-        </button>
-        <div class="d-opt">
-          <button id="menuSummary" class="ghost sm" title="Mostrar/ocultar o resumo do período">Resumo</button>
-          <button id="menuLegend" class="ghost sm" title="Mostrar/ocultar a legenda de cores">Legenda</button>
-          <button id="helpBtn" title="Como funciona esta tela (tecla ?)">?</button>
-        </div>
-      </div>
     </div>
+  </div>
     <div class="help-pop" id="helpPop" role="tooltip">
       <p><b>O que é isto:</b> o acompanhamento de chamados da equipe. As 8 visões compartilham os mesmos filtros e cores.</p>
       <ul>

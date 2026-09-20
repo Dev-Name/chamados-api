@@ -441,10 +441,17 @@ function handleCalBodyClick(e: MouseEvent): void {
     emit();
     return;
   }
-  const tile = t.closest<HTMLElement>(".mtile");
-  if (tile) {
-    store.refDate = new Date(store.refDate.getFullYear(), Number(tile.dataset.goMonth), 1);
+  const ybtn = t.closest<HTMLElement>("[data-goto-month]");
+  if (ybtn) {
+    store.refDate = new Date(store.refDate.getFullYear(), Number(ybtn.dataset.gotoMonth), 1);
     store.view = "month";
+    emit();
+    return;
+  }
+  const yday = t.closest<HTMLElement>(".yday");
+  if (yday && yday.dataset.iso) {
+    store.refDate = startOf(new Date(yday.dataset.iso));
+    store.view = "day";
     emit();
     return;
   }
@@ -533,57 +540,149 @@ function renderMonth(): void {
 }
 
 // ---------- visão anual ----------
+interface MonthStat {
+  used: number;
+  cap: number;
+  active: number;
+  late: number;
+  done: number;
+  dayUsed: number[];
+  dayCap: number[];
+}
+
+function monthStat(y: number, m: number): MonthStat {
+  const ais = visibleAnalysts();
+  const daysIn = new Date(y, m + 1, 0).getDate();
+  const st = { used: 0, cap: 0, active: 0, late: 0, done: 0, dayUsed: [], dayCap: [] } as MonthStat;
+  const first = new Date(y, m, 1).getTime();
+  const last = new Date(y, m + 1, 0).getTime();
+  for (let dd = 1; dd <= daysIn; dd++) {
+    const d = new Date(y, m, dd);
+    let du = 0;
+    let dc = 0;
+    for (const a of ais) {
+      dc += prodCapOfDow(a, d.getDay());
+      du += usedMinInDay(a, d);
+    }
+    st.dayUsed.push(du);
+    st.dayCap.push(dc);
+    st.used += du;
+    st.cap += dc;
+  }
+  for (const a of ais) {
+    for (const t of a.tickets) {
+      if (!visibleTicket(t)) continue;
+      const s = t.startDate ? new Date(t.startDate).getTime() : null;
+      const e = t.dueDate ? new Date(t.dueDate).getTime() : null;
+      if (s == null || e == null || s > last || e < first) continue;
+      if (t.status === "COMPLETED") st.done++;
+      else {
+        st.active++;
+        if (isOverdue(t)) st.late++;
+      }
+    }
+  }
+  return st;
+}
+
+function dayLoadCls(used: number, cap: number): string {
+  if (cap <= 0) return used > 0 ? "yd-3" : "";
+  if (used === 0) return "yd-0";
+  const r = used / cap;
+  if (r < 0.8) return "yd-1";
+  if (r <= 1) return "yd-2";
+  return "yd-3";
+}
+
+function monthBadge(occ: number, cap: number): { cls: string; txt: string } {
+  if (cap <= 0) return { cls: "yb-none", txt: "Sem expediente" };
+  if (occ >= 1) return { cls: "yb-over", txt: "Sobrecarga" };
+  if (occ >= 0.8) return { cls: "yb-warn", txt: "Atenção" };
+  return { cls: "yb-ok", txt: "Saudável" };
+}
+
 function renderYear(): void {
   const calBody = document.getElementById("calBody")!;
   const y = store.refDate.getFullYear();
   const now = new Date();
-  const days = periodDays();
-  const byDate = new Map<string, number>();
-  let maxDay = 1;
-  let totalUsed = 0;
-  let distinct = 0;
-  for (const d of days) {
-    let used = 0;
-    for (const a of visibleAnalysts()) used += usedMinInDay(a, d);
-    byDate.set(d.toISOString().slice(0, 10), used);
-    totalUsed += used;
-    if (used > maxDay) maxDay = used;
-  }
-  for (const a of visibleAnalysts()) {
-    for (const t of a.tickets) {
-      if (t.status !== "COMPLETED") distinct++;
-    }
-  }
+  const ais = visibleAnalysts();
 
-  let html = '<div class="year">';
+  let html = `<div class="year-head">
+      <h2>Análise de ${y}</h2>
+      <div class="year-legend">
+        <span class="yl-item"><i class="yl-s yl-o"></i>Fora do expediente</span>
+        <span class="yl-item"><i class="yl-s yl-0"></i>Sem chamados</span>
+        <span class="yl-item"><i class="yl-s yl-1"></i>Saudável (&lt;80%)</span>
+        <span class="yl-item"><i class="yl-s yl-2"></i>Próximo do limite</span>
+        <span class="yl-item"><i class="yl-s yl-3"></i>Sobrecarga (&gt;100%)</span>
+      </div>
+      <span class="year-clue">Clique num dia para abrir · passe o mouse para ver os detalhes</span>
+    </div><div class="year">`;
+
   for (let mm = 0; mm < 12; mm++) {
-    let monthUsed = 0;
-    const cells = monthMatrix(y, mm);
-    let heat = "";
-    for (const c of cells) {
-      const k = c.d.toISOString().slice(0, 10);
-      const used = byDate.get(k) || 0;
-      const q = Math.min(used / maxDay, 1);
-      const isToday = sameDay(c.d, now);
-      const style = c.out ? "background:var(--out-bg)" : used > 0 ? `background:color-mix(in srgb, var(--primary) ${Math.round(q * 100)}%, var(--track))` : "";
-      const title = `${c.d.toLocaleDateString("pt-BR")}${used > 0 ? " — " + fmtNum(used) : ""}`;
-      heat += `<div class="hc ${c.out ? "out" : ""}" style="${style} ${isToday ? "outline:2px solid var(--primary);outline-offset:-1px" : ""}" title="${title}"></div>`;
-      monthUsed += used;
-    }
+    const st = monthStat(y, mm);
+    const occ = st.cap > 0 ? st.used / st.cap : st.used > 0 ? 9 : 0;
+    const badge = monthBadge(occ, st.cap);
+    const occPct = Math.round(occ * 100);
+    const barPct = Math.min(occPct, 100);
     const mn = new Date(y, mm, 1);
     const monthLabel = cap(mn.toLocaleDateString("pt-BR", { month: "long" }));
-    html += `<div class="mtile" data-go-month="${mm}" title="Clique para ver ${monthLabel} em detalhes">
+
+    let heat = "";
+    for (const c of monthMatrix(y, mm)) {
+      if (c.out) {
+        heat += `<div class="yday sp0"></div>`;
+        continue;
+      }
+      const dd = c.d.getDate();
+      const du = st.dayUsed[dd - 1];
+      const dc = st.dayCap[dd - 1];
+      const isToday = sameDay(c.d, now);
+      const cls = dayLoadCls(du, dc);
+      const tipLines = [
+        `${c.d.getDate()} de ${cap(c.d.toLocaleDateString("pt-BR", { month: "long" }))} de ${c.d.getFullYear()}`,
+        du > 0 ? `${fmtNum(du)} alocadas${dc > 0 ? " de " + fmtNum(dc) : ""}` : "sem chamados",
+      ];
+      let listed = 0;
+      for (const a of ais) {
+        for (const t of a.tickets) {
+          if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
+          for (const seg of segmentsOf(t, a)) {
+            if (sameDay(seg.date, c.d)) {
+              if (listed < 4) tipLines.push(`#${t.id} ${t.title}`);
+              listed++;
+              break;
+            }
+          }
+        }
+      }
+      if (listed > 4) tipLines.push(`+${listed - 4} outros chamados`);
+      const tip = du > 0 || listed > 0 ? ` data-tip="${esc(tipLines.join("\n"))}"` : "";
+      const off = dc <= 0 && du === 0 ? ' style="background:var(--out-bg)"' : "";
+      heat += `<div class="yday${cls ? " " + cls : ""}${isToday ? " today" : ""}" data-iso="${c.d.toISOString()}"${tip}${off} title="Clique para abrir este dia">${dd}</div>`;
+    }
+
+    html += `<div class="ycard">
+      <div class="yc-top">
         <h3>${monthLabel}</h3>
-        <div class="stat">${fmtNum(monthUsed)} previstas</div>
-        <div class="heat">${heat}</div>
-      </div>`;
+        <span class="yc-badge ${badge.cls}">${badge.txt}</span>
+      </div>
+      <div class="yc-metrics">
+        <span class="yc-k">${fmtNum(st.used)}</span>
+        <span>/ ${fmtNum(st.cap)}</span>
+        <span class="yc-pct">${occPct}%</span>
+      </div>
+      <div class="yc-bar"><div class="yc-fill" style="width:${barPct}%"></div></div>
+      <div class="yc-counts">
+        <span class="yc-c"><b>${st.active}</b> ${st.active === 1 ? "chamado ativo" : "chamados ativos"}</span>
+        <span class="yc-c ${st.late > 0 ? "bad" : ""}"><b>${st.late}</b> ${st.late === 1 ? "atrasado" : "atrasados"}</span>
+        <span class="yc-c ok"><b>${st.done}</b> concluídos</span>
+      </div>
+      <div class="yheat">${heat}</div>
+      <div><button class="ybtn" data-goto-month="${mm}" title="Abrir ${monthLabel} de ${y} na visão de Mês">Ver detalhes do mês</button></div>
+    </div>`;
   }
   html += "</div>";
-
-  html += `<div class="year-summary">
-      <div><b>${fmtNum(totalUsed)}</b><span>de trabalho previsto no ano</span></div>
-      <div><b>${distinct}</b><span>chamados ativos</span></div>
-    </div>`;
   calBody.innerHTML = html;
 }
 

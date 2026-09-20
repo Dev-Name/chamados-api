@@ -60,7 +60,7 @@ export interface Prefs {
   sideCollapsed: boolean;
 }
 
-export const DENSITY_Z: Record<Density, number> = { compact: 0.5, comfort: 0.6, expanded: 1 };
+export const DENSITY_Z: Record<Density, number> = { compact: 0.4, comfort: 0.5, expanded: 0.6 };
 
 export const SHIFT_START = 9;
 export const PPM = 1;

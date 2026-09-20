@@ -56,7 +56,7 @@ export function renderLoad(): void {
       rowCap += avail;
       const pct = avail > 0 ? Math.round(frac * 100) : 0;
       cells += `<td class="ld-c" style="background:${heatColor(frac)}" data-a="${a.id}" data-iso="${d.toISOString()}" data-pct="${pct}"
-          title="${fmtNum(used)} / ${fmtNum(avail)} min (${pct}%) — ${esc(a.name)}"></td>`;
+          title="${fmtNum(used)} / ${fmtNum(avail)} (${pct}%) — ${esc(a.name)}"></td>`;
     }
     const rowFrac = rowCap > 0 ? rowUsed / rowCap : 0;
     html += `<tr>

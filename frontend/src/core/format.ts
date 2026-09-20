@@ -45,8 +45,10 @@ export function minOfDay(d: Date): number {
 }
 
 export function fmtNum(m: number): string {
-  if (m >= 60) return `${(m / 60).toFixed(1).replace(".", ",")}h`;
-  return `${m}min`;
+  const h = m / 60;
+  if (h === 0) return "0h";
+  const s = Number.isInteger(h) ? String(Math.round(h)) : (Math.round(h * 10) / 10).toFixed(1).replace(".", ",");
+  return s + "h";
 }
 
 export function min2time(m: number): string {

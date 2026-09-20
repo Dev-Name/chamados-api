@@ -24,7 +24,7 @@ function cardHtml(t: Ticket, a: Analyst): string {
   const dep = t.dependsOnTicketId != null ? "⛓" : "";
   const tooltip =
     `#${t.id} ${t.title}\n${t.category.name} • ${statusLabel[t.status] || t.status}${late ? " • ATRASADO" : ""}\n` +
-    `analista: ${a.name}\nestimado: ${fmtNum(t.estimatedMinutes)} min${t.workedMinutes ? " • trabalhado: " + fmtNum(t.workedMinutes) : ""}` +
+    `analista: ${a.name}\nestimado: ${fmtNum(t.estimatedMinutes)}${t.workedMinutes ? " • trabalhado: " + fmtNum(t.workedMinutes) : ""}` +
     (t.startDate ? `\n${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}` : "");
   return `<article class="kb-card${late ? " late" : ""}" draggable="true" data-id="${t.id}" data-aid="${a.id}" title="${esc(tooltip)}">
     <div class="kb-card-top">
@@ -34,7 +34,7 @@ function cardHtml(t: Ticket, a: Analyst): string {
     <div class="kb-card-meta">
       <span class="kb-cat" title="${esc(t.category.name)}">${esc(t.category.name)}</span>
       <span class="kb-analyst" title="${esc(a.name)}">${avatarHtml(a, 14)}<span class="kb-a-name">${esc(a.name.split(" ")[0])}</span></span>
-      <span class="kb-ext">${fmtNum(t.estimatedMinutes)}min</span>
+      <span class="kb-ext">${fmtNum(t.estimatedMinutes)}</span>
       ${dep ? '<span class="kb-dep" title="Possui dependências">⛓</span>' : ""}
       ${late ? '<span class="kb-alert" title="Atrasado">!</span>' : ""}
     </div>

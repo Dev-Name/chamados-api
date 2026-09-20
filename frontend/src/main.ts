@@ -49,11 +49,11 @@ function updateSummary(): void {
   }
   bar.innerHTML =
     `<div class="sum-chips">` +
-    `<span class="sum-chip"><b>${days.length}</b> dias</span>` +
-    `<span class="sum-chip"><b>${active}</b> chamados ativos</span>` +
+    `<span class="sum-chip"><b>${days.length}</b> ${days.length === 1 ? "dia" : "dias"}</span>` +
+    `<span class="sum-chip"><b>${active}</b> ${active === 1 ? "chamado ativo" : "chamados ativos"}</span>` +
     `<span class="sum-chip"><b>${fmtNum(remain)}</b> restantes</span>` +
     (dayWork ? `<span class="sum-chip"><b>${fmtNum(dayWork)}</b> de capacidade</span>` : "") +
-    (late ? `<span class="sum-chip bad"><b>${late}</b> atrasado(s)</span>` : "") +
+    (late ? `<span class="sum-chip bad"><b>${late}</b> ${late === 1 ? "atrasado" : "atrasados"}</span>` : "") +
     `</div>`;
 }
 
@@ -162,6 +162,25 @@ function wireTopbar(): void {
     syncWeekendUI();
     emit();
   });
+
+  const FILTER_OPEN_KEY = "chamados-filters-open";
+  const filterBtn = document.getElementById("filterToggle");
+  const filterBar = document.getElementById("filterBar");
+  const setFilterOpen = (open: boolean) => {
+    filterBar?.classList.toggle("open", open);
+    filterBtn?.classList.toggle("active", open);
+    filterBtn?.setAttribute("aria-expanded", String(open));
+    sessionStorage.setItem(FILTER_OPEN_KEY, String(open));
+  };
+  let filterOpen = false;
+  if (typeof sessionStorage !== "undefined") {
+    const saved = sessionStorage.getItem(FILTER_OPEN_KEY);
+    filterOpen = saved === null ? true : saved === "true";
+  }
+  setFilterOpen(filterOpen);
+  filterBtn?.addEventListener("click", () =>
+    setFilterOpen(!filterBar!.classList.contains("open"))
+  );
 
   document.getElementById("recalcAll")?.addEventListener("click", async () => {
     try {

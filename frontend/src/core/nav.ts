@@ -62,7 +62,10 @@ function weekLabelFrom(ws: Date): string {
 export function periodLabel(): string {
   const d = startOf(store.refDate);
   const v = store.view;
-  if (v === "day") return longDay(d);
+  if (v === "day") {
+    const month = cap(d.toLocaleDateString("pt-BR", { month: "long" }));
+    return `${d.getDate()} de ${month} de ${d.getFullYear()}`;
+  }
   const ws = mondayOf(d);
   if (v === "week" || v === "load") return weekLabelFrom(ws);
   if (v === "month") return longMonth(d);

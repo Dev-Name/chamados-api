@@ -59,10 +59,7 @@ function closeHelp(): void {
 function syncLegendLabel(): void {
   const on = document.getElementById("legendPop")?.classList.contains("show");
   const el = document.getElementById("menuLegend");
-  if (el && on !== undefined) {
-    el.textContent = (on ? "✓ " : "") + "Legenda";
-    el.classList.toggle("on", on);
-  }
+  if (el && on !== undefined) el.classList.toggle("on", on);
 }
 
 function toggleLegend(): void {
@@ -84,25 +81,30 @@ export function syncDensityUI(): void {
 
 export function syncWeekendUI(): void {
   const b = document.getElementById("weekendToggle");
-  if (b) b.textContent = store.prefs.hideWeekends ? "Fim de semana: oculto" : "Fim de semana: mostrar";
+  const hidden = !!store.prefs.hideWeekends;
+  if (b) {
+    b.classList.toggle("on", hidden);
+    b.title = hidden ? "Mostrar sábado e domingo (ativo)" : "Ocultar sábado e domingo";
+  }
 }
 
 export function applyUiPrefs(): void {
   document.documentElement.dataset.density = store.prefs.density;
-  const summary = document.getElementById("summaryBar");
-  if (summary) summary.classList.toggle("show", !!store.prefs.summary);
+  const sumWrap = document.getElementById("sumWrap");
+  if (sumWrap) sumWrap.classList.toggle("show", !!store.prefs.summary);
   const side = document.getElementById("side");
   if (side) side.classList.toggle("min", !!store.prefs.sideCollapsed);
   document.body.classList.toggle("side-min", !!store.prefs.sideCollapsed);
   const st = document.getElementById("sideToggle") as HTMLElement | null;
   if (st) st.title = store.prefs.sideCollapsed ? "Expandir menu" : "Recolher menu";
-  const setLab = (id: string, on: boolean, label: string) => {
+  const setOn = (id: string, on: boolean) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = (on ? "✓ " : "") + label;
     el.classList.toggle("on", on);
   };
-  setLab("menuSummary", !!store.prefs.summary, "Resumo");
+  setOn("menuSummary", !!store.prefs.summary);
+  const wbtn = document.getElementById("weekendToggle");
+  if (wbtn) wbtn.hidden = store.view !== "week" && store.view !== "gantt";
   syncLegendLabel();
   syncDensityUI();
   syncWeekendUI();
