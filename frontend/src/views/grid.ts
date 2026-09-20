@@ -1,4 +1,4 @@
-import { store, currentZ, statusLabel, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
+import { store, currentZ, statusLabel, statusColor, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
 import type { Analyst, Ticket, Density } from "../core/state";
 import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml } from "../core/analysts";
 import { blockColor, priorityColor, segmentsOf, usedMinInDay, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
@@ -506,6 +506,7 @@ interface MonthChip {
   pri: number;
   analyst: Analyst;
   hoursMin: number;
+  status: string;
 }
 
 function monthChipHtml(ch: MonthChip, density: Density): string {
@@ -515,11 +516,15 @@ function monthChipHtml(ch: MonthChip, density: Density): string {
     return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
   }
   if (density === "expanded") {
+    const stc = statusColor[ch.status] || "#9aa4b2";
     return `<div class="mc mc-x" style="--c:${ch.c}" title="${tip}">
-      ${avatarHtml(ch.analyst, 20)}
-      <span class="xp" style="background:${priorityColor(ch.pri)}">P${ch.pri}</span>
-      <span class="xt">#${ch.id} ${esc(ch.title)}</span>
-      <span class="xh">${fmtNum(ch.hoursMin)}</span>
+      <div class="mc-x-top">
+        ${avatarHtml(ch.analyst, 20)}
+        <span class="mc-x-p" style="background:${priorityColor(ch.pri)}">P${ch.pri}</span>
+        <span class="mc-x-h">${fmtNum(ch.hoursMin)}</span>
+      </div>
+      <div class="mc-x-t"><b>#${ch.id}</b><span>${esc(ch.title)}</span></div>
+      <span class="mc-x-s" style="--stc:${stc}">${statusLabel[ch.status] || ch.status}</span>
     </div>`;
   }
   return `<div class="mc" style="--c:${ch.c}"><span class="t">${ch.t}</span><span class="tt">#${ch.id} ${esc(ch.title)}</span></div>`;
@@ -582,6 +587,7 @@ function renderMonth(): void {
             pri: t.priority,
             analyst: a,
             hoursMin: mins,
+            status: t.status,
           });
         }
       }
@@ -595,7 +601,7 @@ function renderMonth(): void {
         <div class="day-cell-header">
           <span class="day-number${isToday ? " is-today" : ""}">${d.getDate()}</span>
         </div>
-        <div class="mbody">`;
+        <div class="mbody${density === "expanded" ? " day-cell-content" : ""}">`;
     if (c.out) html += '<div class="mc-more"></div>';
     else {
       for (const ch of shown) html += monthChipHtml(ch, density);

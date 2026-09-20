@@ -452,6 +452,7 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 }
 .mday.weekend .day-number { color: var(--muted); }
 .mday .mbody { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow: hidden; }
+.mday .day-cell-content { display: flex; flex-direction: column; gap: 6px; padding: 6px; }
 .mc {
   display: flex; align-items: center; gap: 4px; font-size: var(--d-font); font-weight: 600; line-height: 1.3;
   background: color-mix(in srgb, var(--c) 12%, var(--block-mix)); border-left: 3px solid var(--c);
@@ -464,15 +465,37 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 .mc-c .mc-sw { width: 5px; height: 11px; border-radius: 2px; background: var(--c); flex: none; }
 .mc-c b { overflow: hidden; text-overflow: ellipsis; color: var(--text); font-variant-numeric: tabular-nums; }
 .mc-x {
-  min-height: 30px; padding: 2px 5px; white-space: normal;
-  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 5px; align-items: center;
+  min-height: 0; padding: 5px; white-space: normal;
+  display: flex; flex-direction: column; gap: 4px;
+  background: color-mix(in srgb, var(--c) 8%, var(--block-mix));
+  border: 1px solid color-mix(in srgb, var(--c) 22%, var(--border));
+  border-left: 3px solid var(--c);
 }
-.mc-x .xp { flex: none; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 4px; }
-.mc-x .xt {
-  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  line-height: 1.25; min-width: 0;
+.mc-x-top { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.mc-x .avatar { width: 20px; height: 20px; font-size: 9px; border-radius: 6px; flex: none; }
+.mc-x-p { flex: none; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 4px; }
+.mc-x-h {
+  margin-left: auto; flex: none; font-size: var(--d-small); font-weight: 700;
+  color: var(--text); background: color-mix(in srgb, var(--c) 14%, var(--block-mix));
+  border: 1px solid color-mix(in srgb, var(--c) 28%, var(--border));
+  padding: 1px 6px; border-radius: 12px; font-variant-numeric: tabular-nums;
 }
-.mc-x .xh { flex: none; font-size: var(--d-small); color: var(--muted); font-variant-numeric: tabular-nums; }
+.mc-x-t {
+  display: flex; align-items: baseline; gap: 4px; min-width: 0;
+  font-size: var(--d-title); color: var(--text);
+}
+.mc-x-t b { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mc-x-t span {
+  flex: 1; min-width: 0; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3;
+}
+.mc-x-s {
+  align-self: flex-start; font-size: 9px; font-weight: 700; line-height: 1.5;
+  color: color-mix(in srgb, var(--stc) 85%, var(--text));
+  background: color-mix(in srgb, var(--stc) 14%, var(--block-mix));
+  border: 1px solid color-mix(in srgb, var(--stc) 26%, var(--border));
+  padding: 0 6px; border-radius: 12px; white-space: nowrap;
+}
 .mc-hint {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 22px; color: var(--muted); opacity: 0; transition: opacity .15s; pointer-events: none;
