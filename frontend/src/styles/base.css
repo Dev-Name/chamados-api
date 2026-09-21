@@ -177,7 +177,8 @@ body.side-min main { margin-left: 60px; }
   display: flex; justify-content: space-between; align-items: center;
   width: 100%; background: var(--panel);
   border: 1px solid var(--border); border-radius: var(--rad);
-  box-shadow: var(--shadow); padding: 10px 16px; margin-bottom: 6px;
+  box-shadow: var(--shadow); padding: 6px 16px; margin-bottom: 6px;
+  max-height: 44px;
 }
 .top-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 12px; }
@@ -198,7 +199,7 @@ body.side-min main { margin-left: 60px; }
 .toolbar-select {
   border: 1px solid var(--border); background: var(--panel); color: var(--text);
   border-radius: 6px; height: 36px; padding: 0 8px; font-size: 13px; font-weight: 500;
-  cursor: pointer; outline: none; box-sizing: border-box;
+  cursor: pointer; outline: none; box-sizing: border-box; min-width: 175px;
 }
 .toolbar-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,110,246,.15); }
 .util-btn {
@@ -221,20 +222,26 @@ body.side-min main { margin-left: 60px; }
 }
 #menuSummary.on { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
 .util-menu button .bi { width: 16px; height: 16px; flex: none; }
-.util-menu-wrap { position: relative; }
+.util-menu-wrap {
+  display: inline-flex; align-items: center; position: relative;
+  max-width: 36px; overflow: hidden; transition: max-width 0.2s ease;
+  vertical-align: middle;
+}
+.util-menu-wrap.open { max-width: 320px; }
 .util-menu {
-  display: none; position: absolute; right: 0; top: calc(100% + 4px); z-index: 50;
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);
-  box-shadow: var(--shadow); padding: 4px; min-width: 140px; flex-direction: column; gap: 2px;
+  display: flex; align-items: center; gap: 6px;
+  opacity: 0; transition: opacity 0.15s ease;
+  flex: none;
 }
-.util-menu.show { display: flex; }
+.util-menu-wrap.open .util-menu { opacity: 1; }
 .util-menu button {
-  border: none; background: transparent; color: var(--text); padding: 5px 8px;
-  border-radius: 6px; font: inherit; font-size: var(--fs-sm); cursor: pointer;
-  display: flex; align-items: center; gap: 6px; text-align: left;
+  border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+  border-radius: 6px; height: 36px; padding: 0 8px; font-size: 13px; font-weight: 500;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  box-sizing: border-box; white-space: nowrap;
 }
-.util-menu button:hover { background: var(--hover-strong); }
-.util-menu button .bi { width: 14px; height: 14px; flex: none; }
+.util-menu button:hover { background: var(--hover-strong); color: var(--text); }
+.util-menu button[aria-pressed="true"] { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
 
 /* Camada 3: Filtros (isenta abaixo da toolbar) */
 .topbar select { max-width: 165px; }

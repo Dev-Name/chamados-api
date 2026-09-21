@@ -152,14 +152,9 @@ export function wireChrome(): void {
 
   let utilOpen = false;
   const utilBtn = document.getElementById("utilBtn");
-  const utilMenu = document.getElementById("utilMenu");
-  const toggleUtil = () => { utilOpen = !utilOpen; if (utilMenu) utilMenu.classList.toggle("show", utilOpen); };
+  const utilWrap = document.getElementById("utilMenuWrap");
+  const toggleUtil = () => { utilOpen = !utilOpen; if (utilWrap) utilWrap.classList.toggle("open", utilOpen); };
   utilBtn?.addEventListener("click", (e) => { e.stopPropagation(); toggleUtil(); });
-  document.addEventListener("click", (e) => {
-    if (utilOpen && !(e.target as HTMLElement).closest(".util-menu-wrap")) {
-      utilOpen = false; if (utilMenu) utilMenu.classList.remove("show");
-    }
-  });
 
   document.getElementById("helpClose")?.addEventListener("click", () => closeHelp());
   document.getElementById("legendClose")?.addEventListener("click", () => closeLegend());
