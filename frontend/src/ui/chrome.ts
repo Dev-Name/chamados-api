@@ -82,8 +82,13 @@ export function closeLegend(): void {
 }
 
 export function syncDensityUI(): void {
-  const s = document.getElementById("densitySelect") as HTMLSelectElement | null;
-  if (s) s.value = store.prefs.density;
+  const lbl = document.getElementById("densityLabel");
+  const opt = document.querySelector<HTMLElement>("#densityMenu .cs-option[selected]");
+  if (lbl && opt) lbl.textContent = opt.textContent ?? "";
+  const trig = document.querySelector(".cs-trigger");
+  if (trig) trig.setAttribute("aria-expanded", "false");
+  const menu = document.getElementById("densityMenu");
+  if (menu) menu.classList.remove("open");
 }
 
 export function syncWeekendUI(): void {
@@ -155,6 +160,46 @@ export function wireChrome(): void {
   const utilWrap = document.getElementById("utilMenuWrap");
   const toggleUtil = () => { utilOpen = !utilOpen; if (utilWrap) utilWrap.classList.toggle("open", utilOpen); };
   utilBtn?.addEventListener("click", (e) => { e.stopPropagation(); toggleUtil(); });
+
+  const densityMenu = document.getElementById("densityMenu");
+  densityMenu?.addEventListener("click", (e) => {
+    const opt = (e.target as HTMLElement).closest<HTMLElement>(".cs-option");
+    if (!opt) return;
+    const val = opt.dataset.value;
+    if (val) {
+      store.prefs.density = val as "compact" | "comfort" | "expanded";
+      savePrefs();
+      document.querySelectorAll("#densityMenu .cs-option").forEach((o) => o.removeAttribute("selected"));
+      opt.setAttribute("selected", "");
+      syncDensityUI();
+      applyUiPrefs();
+    }
+    const menu = document.getElementById("densityMenu");
+    if (menu) menu.classList.remove("open");
+    const trig = document.querySelector(".cs-trigger");
+    if (trig) trig.setAttribute("aria-expanded", "false");
+  });
+
+  const csTrigger = document.querySelector(".cs-trigger");
+  csTrigger?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById("densityMenu");
+    const trig = document.querySelector(".cs-trigger");
+    const isOpen = menu?.classList.contains("open") ?? false;
+    if (menu) menu.classList.toggle("open", !isOpen);
+    if (trig) trig.setAttribute("aria-expanded", String(!isOpen));
+    const otherMenu = document.getElementById("utilMenu");
+    if (otherMenu) otherMenu.classList.remove("open");
+    const otherWrap = document.getElementById("utilMenuWrap");
+    if (otherWrap) otherWrap.classList.remove("open");
+  });
+
+  document.addEventListener("click", () => {
+    const menu = document.getElementById("densityMenu");
+    const trig = document.querySelector(".cs-trigger");
+    if (menu) menu.classList.remove("open");
+    if (trig) trig.setAttribute("aria-expanded", "false");
+  });
 
   document.getElementById("helpClose")?.addEventListener("click", () => closeHelp());
   document.getElementById("legendClose")?.addEventListener("click", () => closeLegend());

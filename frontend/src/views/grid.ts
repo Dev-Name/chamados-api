@@ -147,7 +147,7 @@ function renderDayWeek(isDay: boolean): void {
   const dayH = isDay ? Math.max((dayEnd - baseStart) * z, 180) : Math.max((maxCap / 60) * 60 * z, 180);
 
   let head = `<div class="grid-row grid-head${isDay ? " grid-head-day" : ""}" style="grid-template-columns:${template}">
-      <div class="lbl" style="top:0;left:0">Horas</div>`;
+              <div class="lbl" style="top:0;left:0">ANALISTAS</div>`;
   if (isDay) {
     const d = days[0];
     for (const a of ais) {
@@ -216,7 +216,7 @@ function renderDayWeek(isDay: boolean): void {
           ${usageAll ? `<span class="bcap wk" style="color:${wkColor}" title="Ocupado: ${fmtNum(dayTotal)} · disponível: ${fmtNum(usageAll.avail)}">${activeCount} chamado(s) · ${pct}%</span>` : ""}
         </div>`;
 
-      for (const d of days) rows += dayCellHtml(a, d, dayH, now, startForDow(a, d.getDay()), true);
+      for (const d of days) rows += dayCellHtml(a, d, dayH, now, startForDow(a, d.getDay()), false);
       rows += "</div>";
     }
   }

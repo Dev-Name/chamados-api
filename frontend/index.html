@@ -81,11 +81,17 @@
         </div>
       </div>
       <div class="toolbar-right">
-        <select id="densitySelect" class="toolbar-select" title="Densidade">
-          <option value="compact">Densidade: Compacto</option>
-          <option value="comfort" selected>Densidade: Confortável</option>
-          <option value="expanded">Densidade: Expandido</option>
-        </select>
+        <div class="custom-select" id="densityWrap" title="Densidade">
+          <button class="cs-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="cs-label" id="densityLabel">Densidade: Confortável</span>
+            <svg class="bi cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="cs-menu" id="densityMenu" role="listbox">
+            <div class="cs-option" data-value="compact" role="option">Densidade: Compacto</div>
+            <div class="cs-option" data-value="comfort" role="option" selected>Densidade: Confortável</div>
+            <div class="cs-option" data-value="expanded" role="option">Densidade: Expandido</div>
+          </div>
+        </div>
         <button id="filterToggle" class="active" aria-expanded="true" aria-controls="filterBar" title="Mostrar ou ocultar a barra de filtros">
           <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           <span>Filtros</span>
@@ -94,7 +100,7 @@
           <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>Resumo</span>
         </button>
-        <div class="util-menu-wrap">
+        <div class="util-menu-wrap" id="utilMenuWrap">
           <button id="utilBtn" class="util-btn" title="Mais opções">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
           </button>
@@ -112,6 +118,7 @@
               <span>?</span>
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

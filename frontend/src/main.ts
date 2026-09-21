@@ -149,14 +149,6 @@ function wireTopbar(): void {
     emit();
   });
 
-  document.getElementById("densitySelect")?.addEventListener("change", (e) => {
-    const v = (e.target as HTMLSelectElement).value;
-    store.prefs.density = v as "compact" | "comfort" | "expanded";
-    savePrefs();
-    syncDensityUI();
-    applyUiPrefs();
-    emit();
-  });
   document.getElementById("weekendToggle")?.addEventListener("click", () => {
     store.prefs.showWeekend = !store.prefs.showWeekend;
     savePrefs();

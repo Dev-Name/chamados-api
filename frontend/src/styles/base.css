@@ -222,6 +222,29 @@ body.side-min main { margin-left: 60px; }
 }
 #menuSummary.on { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
 .util-menu button .bi { width: 16px; height: 16px; flex: none; }
+.custom-select { position: relative; display: inline-flex; }
+.cs-trigger {
+  border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+  border-radius: 6px; height: 36px; padding: 0 8px; font-size: 13px; font-weight: 500;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  box-sizing: border-box; white-space: nowrap; min-width: 175px;
+}
+.cs-trigger:hover { background: var(--hover-strong); color: var(--text); }
+.cs-trigger .cs-label { flex: 1; text-align: left; }
+.cs-trigger .cs-arrow { width: 16px; height: 16px; flex: none; }
+.cs-menu {
+  display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: 50;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: var(--shadow); padding: 4px; min-width: 200px; flex-direction: column; gap: 2px;
+}
+.cs-menu.open { display: flex; }
+.cs-option {
+  border: none; background: transparent; color: var(--muted); padding: 6px 8px;
+  border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.cs-option:hover { background: var(--hover-strong); color: var(--text); }
+.cs-option[selected] { color: #2563eb; background: #eff6ff; }
 .util-menu-wrap {
   display: inline-flex; align-items: center; position: relative;
   max-width: 36px; overflow: hidden; transition: max-width 0.2s ease;
@@ -242,6 +265,7 @@ body.side-min main { margin-left: 60px; }
 }
 .util-menu button:hover { background: var(--hover-strong); color: var(--text); }
 .util-menu button[aria-pressed="true"] { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
+.util-menu button .bi { width: 16px; height: 16px; flex: none; }
 
 /* Camada 3: Filtros (isenta abaixo da toolbar) */
 .topbar select { max-width: 165px; }

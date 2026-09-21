@@ -71,13 +71,13 @@ async function main() {
   }
 
   // densidade
-  const densityOpts = [...doc.querySelectorAll<HTMLSelectElement>("#densitySelect option")];
+  const densityOpts = [...doc.querySelectorAll<HTMLElement>("#densityMenu .cs-option")];
   check("controle de densidade tem 3 opções", densityOpts.length === 3, densityOpts.length + " opções");
-  const dsel = doc.getElementById("densitySelect") as HTMLSelectElement | null;
-  if (dsel) {
-    dsel.value = "compact";
-    dsel.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-    check("densidade compacta aplicada", dsel.value === "compact");
+  const dopt = doc.querySelector<HTMLElement>("#densityMenu .cs-option[data-value=compact]");
+  const dlabel = doc.getElementById("densityLabel");
+  if (dopt && dlabel) {
+    dopt.click();
+    check("densidade compacta aplicada", dlabel.textContent?.includes("Compacto") ?? false);
   } else {
     check("controle de densidade existe", false);
   }
