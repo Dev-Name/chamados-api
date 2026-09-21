@@ -135,7 +135,7 @@ function renderDayWeek(isDay: boolean): void {
   const z = currentZ();
   const days = isDay ? [startOf(store.refDate)] : weekFilteredDays();
   const nCols = days.length;
-   const rail = "220px";
+   const rail = "160px";
    const template = isDay ? `${rail} repeat(${Math.max(ais.length, 1)}, minmax(150px, 1fr))` : `${rail} repeat(${nCols}, minmax(118px, 1fr))`;
   const now = new Date();
   const d0 = isDay ? days[0] : null;
