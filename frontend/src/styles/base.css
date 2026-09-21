@@ -252,6 +252,7 @@ body.side-min main { margin-left: 60px; }
   width: 36px; overflow: hidden; white-space: nowrap;
   transition: width 0.25s ease; flex-shrink: 0;
 }
+.util-menu-wrap .util-btn { flex-shrink: 0; width: 36px; }
 .util-menu-wrap.open { width: 280px; }
 .util-menu {
   display: flex; align-items: center; gap: 6px;
