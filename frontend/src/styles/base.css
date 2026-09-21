@@ -247,16 +247,14 @@ body.side-min main { margin-left: 60px; }
 .cs-option[selected] { color: #2563eb; background: #eff6ff; }
 .util-menu-wrap {
   display: inline-flex; align-items: center; position: relative;
-  width: 36px; overflow: hidden; transition: width 0.25s ease;
-  vertical-align: middle; flex-shrink: 0;
+  width: 36px; overflow: hidden; white-space: nowrap;
+  transition: width 0.25s ease; vertical-align: middle; flex-shrink: 0;
 }
 .util-menu-wrap.open { width: 280px; }
 .util-menu {
   display: flex; align-items: center; gap: 6px;
-  opacity: 0; transition: opacity 0.15s ease;
   flex-shrink: 0;
 }
-.util-menu-wrap.open .util-menu { opacity: 1; }
 .util-menu button {
   border: 1px solid var(--border); background: var(--panel); color: var(--muted);
   border-radius: 6px; height: 36px; padding: 0 8px; font-size: 13px; font-weight: 500;
