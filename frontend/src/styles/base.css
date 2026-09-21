@@ -195,7 +195,7 @@ body.side-min main { margin-left: 60px; }
 .view-sep { width: 1px; background: var(--border); margin: 0 3px; }
 .bi { width: 16px; height: 16px; flex: none; }
 .toolbar-left { display: inline-flex; align-items: center; gap: 6px; }
-.toolbar-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.toolbar-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; position: relative; }
 .toolbar-select {
   border: 1px solid var(--border); background: var(--panel); color: var(--text);
   border-radius: 6px; height: 36px; padding: 0 8px; font-size: 13px; font-weight: 500;
@@ -245,10 +245,12 @@ body.side-min main { margin-left: 60px; }
 }
 .cs-option:hover { background: var(--hover-strong); color: var(--text); }
 .cs-option[selected] { color: #2563eb; background: #eff6ff; }
+.toolbar-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 .util-menu-wrap {
-  display: inline-flex; align-items: center; position: relative;
+  position: absolute; right: 0; top: 0;
+  display: inline-flex; align-items: center; flex-direction: row-reverse;
   width: 36px; overflow: hidden; white-space: nowrap;
-  transition: width 0.25s ease; vertical-align: middle; flex-shrink: 0;
+  transition: width 0.25s ease; flex-shrink: 0;
 }
 .util-menu-wrap.open { width: 280px; }
 .util-menu {

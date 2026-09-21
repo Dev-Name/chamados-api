@@ -66,7 +66,7 @@
       </div>
     </div>
     <!-- CAMADA 2: Toolbar unificada -->
-    <div class="toolbar">
+    <div class="toolbar" style="position:relative;">
       <div class="toolbar-left">
         <div class="seg" id="viewSwitch" role="tablist">
           <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
@@ -100,25 +100,24 @@
           <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>Resumo</span>
         </button>
-        <div class="util-menu-wrap" id="utilMenuWrap">
-          <button id="utilBtn" class="util-btn" title="Mais opções">
-            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </div>
+      <div class="util-menu-wrap" id="utilMenuWrap">
+        <button id="utilBtn" class="util-btn" title="Mais opções">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </button>
+        <div class="util-menu" id="utilMenu">
+          <button id="weekendToggle" aria-pressed="true" title="Mostrar ou ocultar sábado e domingo">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+            <span>Fim de semana</span>
           </button>
-          <div class="util-menu" id="utilMenu">
-            <button id="weekendToggle" aria-pressed="true" title="Mostrar ou ocultar sábado e domingo">
-              <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
-              <span>Fim de semana</span>
-            </button>
-            <button id="menuLegend" title="Mostrar/ocultar a legenda de cores">
-              <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-              <span>Legenda</span>
-            </button>
-            <button id="helpBtn" title="Como funciona esta tela (tecla ?)">
-              <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-              <span>?</span>
-            </button>
-          </div>
-        </div>
+          <button id="menuLegend" title="Mostrar/ocultar a legenda de cores">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <span>Legenda</span>
+          </button>
+          <button id="helpBtn" title="Como funciona esta tela (tecla ?)">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            <span>?</span>
+          </button>
         </div>
       </div>
     </div>
