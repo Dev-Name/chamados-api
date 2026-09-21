@@ -247,14 +247,14 @@ body.side-min main { margin-left: 60px; }
 .cs-option[selected] { color: #2563eb; background: #eff6ff; }
 .util-menu-wrap {
   display: inline-flex; align-items: center; position: relative;
-  max-width: 36px; overflow: hidden; transition: max-width 0.2s ease;
-  vertical-align: middle;
+  width: 36px; overflow: hidden; transition: width 0.25s ease;
+  vertical-align: middle; flex-shrink: 0;
 }
-.util-menu-wrap.open { max-width: 320px; }
+.util-menu-wrap.open { width: 280px; }
 .util-menu {
   display: flex; align-items: center; gap: 6px;
   opacity: 0; transition: opacity 0.15s ease;
-  flex: none;
+  flex-shrink: 0;
 }
 .util-menu-wrap.open .util-menu { opacity: 1; }
 .util-menu button {
@@ -342,8 +342,8 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 
 /* ---------- grade semanal / diária ---------- */
 .grid-row { display: grid; }
-.grid-head { grid-template-columns: 220px repeat(7, minmax(118px, 1fr)); }
-.grid-head-day { grid-template-columns: 220px repeat(6, minmax(150px, 1fr)); }
+.grid-head { grid-template-columns: minmax(var(--rail), max-content) repeat(7, minmax(118px, 1fr)); }
+.grid-head-day { grid-template-columns: minmax(var(--rail), max-content) repeat(6, minmax(150px, 1fr)); }
 .lbl, .dhead {
   position: sticky; z-index: 8; background: var(--panel); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
   padding: 5px 6px; font-weight: 700; font-size: var(--fs-sm); display: flex; flex-direction: column; justify-content: flex-start; gap: 1px;
@@ -372,8 +372,8 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
   font-size: var(--d-small); line-height: 17px; font-weight: 700; letter-spacing: .2px; flex: none;
 }
 
-.band { grid-template-columns: 220px repeat(7, minmax(118px, 1fr)); }
-.band.dayband { grid-template-columns: 220px repeat(7, minmax(150px, 1fr)); }
+.band { grid-template-columns: minmax(var(--rail), max-content) repeat(7, minmax(118px, 1fr)); }
+.band.dayband { grid-template-columns: minmax(var(--rail), max-content) repeat(7, minmax(150px, 1fr)); }
 .band-label {
   position: sticky; left: 0; z-index: 7; background: var(--panel);
   border-right: 1px solid var(--border); padding: 8px 10px;
