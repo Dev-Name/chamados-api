@@ -342,11 +342,12 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 
 /* ---------- grade semanal / diária ---------- */
 .grid-row { display: grid; }
-.grid-head { grid-template-columns: min-content repeat(7, minmax(118px, 1fr)); }
-.grid-head-day { grid-template-columns: min-content repeat(6, minmax(150px, 1fr)); }
+.grid-head { grid-template-columns: 220px repeat(7, minmax(118px, 1fr)); }
+.grid-head-day { grid-template-columns: 220px repeat(6, minmax(150px, 1fr)); }
 .lbl, .dhead {
   position: sticky; z-index: 8; background: var(--panel); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
   padding: 5px 6px; font-weight: 700; font-size: var(--fs-sm); display: flex; flex-direction: column; justify-content: flex-start; gap: 1px;
+  box-sizing: border-box;
 }
 .lbl { left: 0; background: var(--panel); color: var(--muted); text-transform: uppercase; letter-spacing: .4px; font-size: var(--fs-sm); align-items: center; justify-content: center; text-align: center; }
 .dhead { top: 0; align-items: center; }
@@ -371,12 +372,13 @@ select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
   font-size: var(--d-small); line-height: 17px; font-weight: 700; letter-spacing: .2px; flex: none;
 }
 
-.band { grid-template-columns: min-content repeat(7, minmax(118px, 1fr)); }
-.band.dayband { grid-template-columns: min-content repeat(7, minmax(150px, 1fr)); }
+.band { grid-template-columns: 220px repeat(7, minmax(118px, 1fr)); }
+.band.dayband { grid-template-columns: 220px repeat(7, minmax(150px, 1fr)); }
 .band-label {
   position: sticky; left: 0; z-index: 7; background: var(--panel);
   border-right: 1px solid var(--border); padding: 8px 10px;
   display: flex; flex-direction: column; gap: 5px; justify-content: flex-start; min-height: 0;
+  box-sizing: border-box;
 }
 .band-label .bname {
   font-weight: 700; font-size: var(--d-title); letter-spacing: -.2px;
