@@ -67,10 +67,15 @@ export function timeToMin(s: string): number | null {
   return hh * 60 + mm;
 }
 
+/** Escapa caracteres HTML especiais de forma segura e eficiente (sem criar elementos DOM). */
 export function esc(s: unknown): string {
-  const d = document.createElement("div");
-  d.textContent = s == null ? "" : String(s);
-  return d.innerHTML;
+  if (s == null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export function workdaysShort(workDays: number[]): string {

@@ -96,10 +96,6 @@ export function go(dir: number): void {
   emit();
 }
 
-export function jump(dir: number): void {
-  go(dir);
-}
-
 export function setView(v: ViewId): void {
   store.view = v;
   store.selected.clear();

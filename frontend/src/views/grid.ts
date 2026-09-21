@@ -1,7 +1,7 @@
 import { store, currentZ, statusLabel, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
 import type { Analyst, Ticket, Density } from "../core/state";
 import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml } from "../core/analysts";
-import { blockColor, priorityColor, segmentsOf, usedMinInDay, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
+import { blockColor, priorityColor, segmentsOf, usedMinInDay, usedMinInDayCached, clearUsedCache, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
 import { visibleAnalysts, visibleTicket } from "../core/filters";
 import { cap, esc, fmtNum, fmtTime, getCleanName, min2time, sameDay, startOf, fmtHour } from "../core/format";
 import { periodDays } from "../core/nav";
@@ -120,6 +120,7 @@ export function renderGrid(): void {
 }
 
 function renderDayWeek(isDay: boolean): void {
+  clearUsedCache();
   const calBody = document.getElementById("calBody")!;
   const calWrap = document.getElementById("calWrap")!;
   calWrap.classList.toggle("noweek", store.prefs.showWeekend === false && !isDay);
@@ -170,7 +171,7 @@ function renderDayWeek(isDay: boolean): void {
         const c = capFor(a, d);
         if (c > 0) {
           capSum += prodCapOfDow(a, d.getDay());
-          usedSum += usedMinInDay(a, d);
+          usedSum += usedMinInDayCached(a, d);
         }
       }
       const pct = capSum > 0 ? Math.round((usedSum / capSum) * 100) + "%" : "";
@@ -547,6 +548,7 @@ function monthMatrix(y: number, m: number): Array<{ d: Date; out: boolean }> {
 }
 
 function renderMonth(): void {
+  clearUsedCache();
   const calBody = document.getElementById("calBody")!;
   const y = store.refDate.getFullYear();
   const m = store.refDate.getMonth();
@@ -698,6 +700,7 @@ function monthBadge(occ: number, cap: number, used: number): { cls: string; txt:
 }
 
 function renderYear(): void {
+  clearUsedCache();
   const calBody = document.getElementById("calBody")!;
   const y = store.refDate.getFullYear();
   const now = new Date();

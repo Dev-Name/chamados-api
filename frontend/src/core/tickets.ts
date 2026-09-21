@@ -49,12 +49,18 @@ export function segmentsOf(t: Ticket, a?: Analyst | null): Segment[] {
   const segs: Segment[] = [];
   let cur = startOf(start);
   while (cur <= due) {
+    const dow = cur.getDay();
+    // Pula dias sem expediente quando o analista está disponível
+    if (a && capFor(a, cur) <= 0) {
+      cur = new Date(cur.getTime() + DAY_MS);
+      continue;
+    }
     const isStart = sameDay(cur, start);
     const isEnd = sameDay(cur, due);
-    const from = isStart ? minOfDay(start) : 0;
+    const from = isStart ? minOfDay(start) : (a ? startForDow(a, dow) : 0);
     const to = isEnd ? minOfDay(due) : 24 * 60;
     if (to > from) {
-      const lunch = a ? lunchForDow(a, cur.getDay()) : null;
+      const lunch = a ? lunchForDow(a, dow) : null;
       if (lunch && lunch.start < to && lunch.end > from) {
         if (from < lunch.start) segs.push({ date: new Date(cur), from, to: Math.min(to, lunch.start) });
         if (lunch.end < to) segs.push({ date: new Date(cur), from: Math.max(from, lunch.end), to });
@@ -84,6 +90,24 @@ export function usedMinInDay(a: Analyst, date: Date): number {
     }
   }
   return Math.min(used, prod);
+}
+
+// Cache de usedMinInDay por render — chave "analystId:dateISO", limpo a cada emissão de store.
+let _usedCache: Map<string, number> | null = null;
+
+/** Versão com cache de usedMinInDay. Usar dentro de um único ciclo de render. */
+export function usedMinInDayCached(a: Analyst, date: Date): number {
+  if (!_usedCache) _usedCache = new Map();
+  const key = `${a.id}:${date.toISOString().slice(0, 10)}`;
+  if (_usedCache.has(key)) return _usedCache.get(key)!;
+  const v = usedMinInDay(a, date);
+  _usedCache.set(key, v);
+  return v;
+}
+
+/** Limpa o cache de usedMinInDay. Deve ser chamado ao início de cada render. */
+export function clearUsedCache(): void {
+  _usedCache = null;
 }
 
 export function allTickets(): Ticket[] {

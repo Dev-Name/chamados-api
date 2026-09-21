@@ -115,17 +115,7 @@ export function renderGantt(): void {
 
   // header ticks
   html += '<div class="g-head" style="width:' + totalPx + "px\">";
-  if (store.ganttScale === "day") {
-    for (let i = 0; i < days; i++) {
-      const d = new Date(ws.getTime() + i * 86400000);
-      html += `<div class="g-tick week" style="left:${i * px}px;width:${px}px" title="${d.toLocaleDateString("pt-BR")}">${d.getDate()}</div>`;
-    }
-  } else if (store.ganttScale === "week") {
-    for (let i = 0; i < days; i++) {
-      const d = new Date(ws.getTime() + i * 86400000);
-      html += `<div class="g-tick week" style="left:${i * px}px;width:${px}px" title="${d.toLocaleDateString("pt-BR")}">${d.getDate()}</div>`;
-    }
-  } else {
+  if (store.ganttScale === "month") {
     let prevMonth = -1;
     for (let i = 0; i < days; i++) {
       const d = new Date(ws.getTime() + i * 86400000);
@@ -133,6 +123,12 @@ export function renderGantt(): void {
         prevMonth = d.getMonth();
         html += `<div class="g-tick month" style="left:${i * px}px;width:${px * 23}px" title="${d.toLocaleDateString("pt-BR")}">${cap(d.toLocaleDateString("pt-BR", { month: "short" }))}</div>`;
       }
+    }
+  } else {
+    // "day" e "week" usam o mesmo tick por dia
+    for (let i = 0; i < days; i++) {
+      const d = new Date(ws.getTime() + i * 86400000);
+      html += `<div class="g-tick week" style="left:${i * px}px;width:${px}px" title="${d.toLocaleDateString("pt-BR")}">${d.getDate()}</div>`;
     }
   }
   html += "</div>";

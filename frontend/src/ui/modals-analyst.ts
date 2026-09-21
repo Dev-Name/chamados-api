@@ -39,8 +39,6 @@ export function renderAnalystList(): void {
   list.innerHTML = "";
   for (const a of store.analysts) {
     const id = a.id;
-    const pv = pendingPhotos.has(id) ? pendingPhotos.get(id) : a.photo;
-    const prevSrc = pv || "";
     const row = document.createElement("div");
     row.className = "an-row brief";
     const capLine = scheduleLabel(a);
@@ -61,7 +59,6 @@ export function renderAnalystList(): void {
         </div>
         <div class="brief-line">${capLine}</div>
         ${hasLunch ? `<div class="brief-line sub">Almoço: <b>${lunchLine}</b></div>` : ""}`;
-    void prevSrc;
     list.appendChild(row);
     row.querySelector("[data-a-edit]")!.addEventListener("click", () => openAnalystForm(id));
     row.querySelector("[data-a-del]")!.addEventListener("click", async () => {
@@ -213,7 +210,11 @@ export function openAnalystForm(id: number | null): void {
       });
     });
   });
-  row.querySelector<HTMLButtonElement>("[data-a-cancel]")!.addEventListener("click", () => renderAnalystList());
+  row.querySelector<HTMLButtonElement>("[data-a-cancel]")!.addEventListener("click", () => {
+    // Descarta foto pendente ao cancelar sem salvar
+    pendingPhotos.delete(aid);
+    renderAnalystList();
+  });
   list.querySelector<HTMLButtonElement>("[data-a-save]")!.addEventListener("click", async () => {
     const name = (row.querySelector<HTMLInputElement>("[data-a-name]")!.value || "").trim();
     if (!name) {

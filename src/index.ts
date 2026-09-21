@@ -8,6 +8,17 @@ import { ticketsRouter } from "./routes/tickets";
 import { categoriesRouter } from "./routes/categories";
 
 const app = express();
+
+// Headers de segurança básicos (sem dependência externa)
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "0"); // desativado em favor do CSP
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+  next();
+});
+
 app.use(express.json({ limit: "6mb" }));
 
 app.use(express.static(path.join(__dirname, "..", "public")));

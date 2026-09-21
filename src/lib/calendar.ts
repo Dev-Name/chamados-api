@@ -1,7 +1,5 @@
 import dayjs, { Dayjs } from "dayjs";
 
-export const MILLIS_PER_MINUTE = 60_000;
-
 /** Início nominal da jornada de trabalho (09:00), usado como âncora dos horários. */
 export const WORKDAY_START_HOUR = 9;
 export const WORKDAY_START_MINUTES = WORKDAY_START_HOUR * 60;

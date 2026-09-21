@@ -7,6 +7,12 @@ export const ticketsRouter = Router();
 
 export const TICKET_STATUSES = Object.values(TicketStatus);
 
+/** Converte param de rota para inteiro positivo ou retorna null. */
+function parseId(param: string): number | null {
+  const n = Number(param);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
 function normTicketInput(body: Record<string, unknown>): {
   error?: string;
   data?: {
@@ -54,7 +60,7 @@ function normTicketInput(body: Record<string, unknown>): {
   }
   if (body.priority !== undefined) {
     const priority = Number(body.priority);
-    if (!Number.isInteger(priority) || priority < 0) return { error: "priority deve ser um inteiro >= 0" };
+    if (!Number.isInteger(priority) || priority < 1 || priority > 5) return { error: "priority deve ser um inteiro entre 1 e 5" };
     data.priority = priority;
   }
   if (body.status !== undefined) {
@@ -81,11 +87,6 @@ function normTicketInput(body: Record<string, unknown>): {
   return { data };
 }
 
-async function analystOfTicket(ticketId: number): Promise<number | null> {
-  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { analystId: true } });
-  return ticket?.analystId ?? null;
-}
-
 ticketsRouter.post("/", async (req, res, next) => {
   try {
     const parsed = normTicketInput(req.body);
@@ -99,6 +100,11 @@ ticketsRouter.post("/", async (req, res, next) => {
     const estimatedMinutes = rest.estimatedMinutes;
     if (!title || !categoryId || !estimatedMinutes) {
       res.status(400).json({ error: "title, categoryId e estimatedMinutes são obrigatórios" });
+      return;
+    }
+    const workedOnCreate = rest.workedMinutes ?? 0;
+    if (workedOnCreate > estimatedMinutes) {
+      res.status(400).json({ error: "workedMinutes não pode ser maior que estimatedMinutes" });
       return;
     }
 
@@ -129,7 +135,8 @@ ticketsRouter.post("/", async (req, res, next) => {
 
 ticketsRouter.patch("/:id", async (req, res, next) => {
   try {
-    const ticketId = Number(req.params.id);
+    const ticketId = parseId(req.params.id);
+    if (!ticketId) { res.status(400).json({ error: "ID inválido" }); return; }
     const previous = await prisma.ticket.findUnique({ where: { id: ticketId } });
     if (!previous) {
       res.status(404).json({ error: "Chamado não encontrado" });
@@ -146,11 +153,24 @@ ticketsRouter.patch("/:id", async (req, res, next) => {
       return;
     }
 
+    // Valida workedMinutes <= estimatedMinutes considerando os valores resultantes
+    const effectiveEstimated = parsed.data.estimatedMinutes ?? previous.estimatedMinutes;
+    const effectiveWorked = parsed.data.workedMinutes ?? previous.workedMinutes;
+    if (effectiveWorked > effectiveEstimated) {
+      res.status(400).json({ error: "workedMinutes não pode ser maior que estimatedMinutes" });
+      return;
+    }
+
     const ticket = await prisma.ticket.update({ where: { id: ticketId }, data: parsed.data });
+
+    // Recalcula o analista novo (ou o atual se não mudou)
+    const newAnalystId = parsed.data.analystId !== undefined ? (parsed.data.analystId ?? null) : previous.analystId;
     await recalcTicketAffected(
-      parsed.data.analystId !== undefined ? (parsed.data.analystId ?? null) : previous.analystId,
+      newAnalystId,
       parsed.data.dependsOnTicketId !== undefined ? parsed.data.dependsOnTicketId : previous.dependsOnTicketId
     );
+
+    // Bug fix: recalcula o analista ANTERIOR sempre que o vínculo mudou (inclusive ao desvincular para null)
     if (parsed.data.analystId !== undefined && parsed.data.analystId !== previous.analystId) {
       if (previous.analystId != null) await recalculateAnalystQueue(previous.analystId);
     }
@@ -162,18 +182,19 @@ ticketsRouter.patch("/:id", async (req, res, next) => {
 
 ticketsRouter.delete("/:id", async (req, res, next) => {
   try {
-    const ticketId = Number(req.params.id);
-    const analystId = await analystOfTicket(ticketId);
-    if (analystId == null) {
-      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-      if (!ticket) {
-        res.status(404).json({ error: "Chamado não encontrado" });
-        return;
-      }
+    const ticketId = parseId(req.params.id);
+    if (!ticketId) { res.status(400).json({ error: "ID inválido" }); return; }
+
+    // Busca o ticket uma única vez — cobre existência e analystId simultaneamente
+    const existing = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { analystId: true } });
+    if (!existing) {
+      res.status(404).json({ error: "Chamado não encontrado" });
+      return;
     }
+
     await prisma.ticket.updateMany({ where: { dependsOnTicketId: ticketId }, data: { dependsOnTicketId: null } });
     await prisma.ticket.delete({ where: { id: ticketId } });
-    if (analystId != null) await recalculateAnalystQueue(analystId);
+    if (existing.analystId != null) await recalculateAnalystQueue(existing.analystId);
     res.status(204).end();
   } catch (error) {
     next(error);

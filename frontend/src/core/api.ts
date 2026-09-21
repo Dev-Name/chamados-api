@@ -1,4 +1,4 @@
-import type { Analyst, Category, Ticket } from "./state";
+import type { Analyst, Category } from "./state";
 import { store } from "./state";
 
 export async function api<T = unknown>(url: string, method = "GET", body?: unknown): Promise<T> {
@@ -41,12 +41,6 @@ export async function reloadAfterMutation(opts?: ReloadOpts): Promise<void> {
 }
 
 export async function loadAnalysts(): Promise<void> {
-  const list = await api<Analyst[]>("/analysts");
-  const withQueue = await Promise.all(
-    list.map(async (a) => {
-      const q = await api<{ tickets: Ticket[] }>("/analysts/" + a.id + "/queue");
-      return { ...a, tickets: q.tickets };
-    })
-  );
-  store.analysts = withQueue;
+  // Usa /analysts/with-queues para carregar analistas e filas numa única query (evita N+1)
+  store.analysts = await api<Analyst[]>("/analysts/with-queues");
 }

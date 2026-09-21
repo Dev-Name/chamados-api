@@ -1,12 +1,16 @@
 import { Router } from "express";
-import { TicketStatus } from "@prisma/client";
 import { prisma, AnalystNotFoundError } from "../lib/errors";
-import { recalculateAnalystQueue } from "../services/ticket.service";
+import { recalculateAnalystQueue, ACTIVE_STATUSES } from "../services/ticket.service";
 
 export const analystsRouter = Router();
 
-const ACTIVE_STATUSES = [TicketStatus.BACKLOG, TicketStatus.IN_PROGRESS, TicketStatus.PAUSED];
 const WEEK = [0, 1, 2, 3, 4, 5, 6];
+
+/** Converte param de rota para inteiro positivo ou retorna null. */
+function parseId(param: string): number | null {
+  const n = Number(param);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
 
 /**
  * Valida um array por dia da semana com 7 elementos onde cada um é
@@ -132,6 +136,54 @@ async function recalcAnalysts(ids: Array<number | null | undefined>) {
   }
 }
 
+type LunchFields = {
+  lunchStartMinutes?: number | null;
+  lunchEndMinutes?: number | null;
+  weeklyLunchStartMinutes?: number[];
+  weeklyLunchEndMinutes?: number[];
+  weeklyStartMinutes?: number[];
+};
+
+/**
+ * Valida e extrai os campos de almoço e início de expediente de um body.
+ * Retorna `{ error }` se inválido, ou `{ fields }` com os campos prontos para persistir.
+ */
+function parseLunchFields(body: Record<string, unknown>): { error: string } | { fields: LunchFields } {
+  const fields: LunchFields = {};
+
+  // Par legado de almoço (único horário para todos os dias)
+  const lunchStart = admittedMinutes(body.lunchStartMinutes);
+  const lunchEnd = admittedMinutes(body.lunchEndMinutes);
+  const lunchErr = validateLunch(lunchStart, lunchEnd);
+  if (lunchErr) return { error: lunchErr };
+  if (lunchStart !== undefined) fields.lunchStartMinutes = lunchStart;
+  if (lunchEnd !== undefined) fields.lunchEndMinutes = lunchEnd;
+
+  // Arrays semanais de almoço
+  const weeklyLs = admittedWeeklyMinutes(body.weeklyLunchStartMinutes);
+  const weeklyLe = admittedWeeklyMinutes(body.weeklyLunchEndMinutes);
+  if (weeklyLs === null)
+    return { error: "weeklyLunchStartMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem almoço" };
+  if (weeklyLe === null)
+    return { error: "weeklyLunchEndMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem almoço" };
+  if ((weeklyLs === undefined) !== (weeklyLe === undefined))
+    return { error: "weeklyLunchStartMinutes e weeklyLunchEndMinutes devem vir juntos (7 valores cada)" };
+  if (weeklyLs !== undefined && weeklyLe !== undefined) {
+    const weeklyErr = validateWeeklyLunch(weeklyLs, weeklyLe);
+    if (weeklyErr) return { error: weeklyErr };
+    fields.weeklyLunchStartMinutes = weeklyLs;
+    fields.weeklyLunchEndMinutes = weeklyLe;
+  }
+
+  // Início de expediente por dia
+  const weeklyStart = admittedWeeklyMinutes(body.weeklyStartMinutes);
+  if (weeklyStart === null)
+    return { error: "weeklyStartMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem expediente" };
+  if (weeklyStart !== undefined) fields.weeklyStartMinutes = weeklyStart;
+
+  return { fields };
+}
+
 analystsRouter.get("/", async (_req, res, next) => {
   try {
     const analysts = await prisma.analyst.findMany({
@@ -146,9 +198,31 @@ analystsRouter.get("/", async (_req, res, next) => {
   }
 });
 
+/**
+ * Retorna todos os analistas com suas filas de tickets embutidas em uma única query,
+ * eliminando o N+1 que ocorria ao chamar GET /analysts + GET /analysts/:id/queue para cada um.
+ */
+analystsRouter.get("/with-queues", async (_req, res, next) => {
+  try {
+    const analysts = await prisma.analyst.findMany({
+      orderBy: { id: "asc" },
+      include: {
+        tickets: {
+          orderBy: [{ priority: "asc" }, { position: "asc" }, { id: "asc" }],
+          include: { dependsOn: true, category: true },
+        },
+      },
+    });
+    res.json(analysts);
+  } catch (error) {
+    next(error);
+  }
+});
+
 analystsRouter.get("/:id/queue", async (req, res, next) => {
   try {
-    const analystId = Number(req.params.id);
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
     const analyst = await prisma.analyst.findUnique({
       where: { id: analystId },
       include: {
@@ -182,45 +256,10 @@ analystsRouter.post("/", async (req, res, next) => {
       });
       return;
     }
-    const lunchStart = admittedMinutes(req.body.lunchStartMinutes);
-    const lunchEnd = admittedMinutes(req.body.lunchEndMinutes);
-    const lunchErr = validateLunch(lunchStart, lunchEnd);
-    if (lunchErr) {
-      res.status(400).json({ error: lunchErr });
-      return;
-    }
-    const weeklyLs = admittedWeeklyMinutes(req.body?.weeklyLunchStartMinutes);
-    const weeklyLe = admittedWeeklyMinutes(req.body?.weeklyLunchEndMinutes);
-    if (weeklyLs === null || weeklyLe === null) {
-      res.status(400).json({
-        error: weeklyLs === null
-          ? "weeklyLunchStartMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem almoço"
-          : "weeklyLunchEndMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem almoço",
-      });
-      return;
-    }
-    if ((weeklyLs === undefined) !== (weeklyLe === undefined)) {
-      res.status(400).json({ error: "weeklyLunchStartMinutes e weeklyLunchEndMinutes devem vir juntos (7 valores cada)" });
-      return;
-    }
-    let weeklyLunchFields:
-      | { weeklyLunchStartMinutes: number[]; weeklyLunchEndMinutes: number[] }
-      | undefined;
-    if (weeklyLs !== undefined && weeklyLe !== undefined) {
-      const weeklyErr = validateWeeklyLunch(weeklyLs, weeklyLe);
-      if (weeklyErr) {
-        res.status(400).json({ error: weeklyErr });
-        return;
-      }
-      weeklyLunchFields = { weeklyLunchStartMinutes: weeklyLs, weeklyLunchEndMinutes: weeklyLe };
-    }
-    const weeklyStart = admittedWeeklyMinutes(req.body?.weeklyStartMinutes);
-    if (weeklyStart === null) {
-      res.status(400).json({
-        error: "weeklyStartMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem expediente",
-      });
-      return;
-    }
+    const lunchResult = parseLunchFields(req.body ?? {});
+    if ("error" in lunchResult) { res.status(400).json({ error: lunchResult.error }); return; }
+    const lunchFields = lunchResult.fields;
+
     let photo: string | null = null;
     if (req.body.photo !== undefined) {
       const accepted = admittedPhoto(req.body.photo);
@@ -234,10 +273,7 @@ analystsRouter.post("/", async (req, res, next) => {
       data: {
         name,
         ...schedule,
-        ...weeklyLunchFields,
-        ...(weeklyStart !== undefined ? { weeklyStartMinutes: weeklyStart } : {}),
-        lunchStartMinutes: lunchStart,
-        lunchEndMinutes: lunchEnd,
+        ...lunchFields,
         photo,
       },
     });
@@ -249,7 +285,8 @@ analystsRouter.post("/", async (req, res, next) => {
 
 analystsRouter.patch("/:id", async (req, res, next) => {
   try {
-    const analystId = Number(req.params.id);
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
     if (!(await prisma.analyst.findUnique({ where: { id: analystId } }))) {
       throw new AnalystNotFoundError(analystId);
     }
@@ -272,54 +309,9 @@ analystsRouter.patch("/:id", async (req, res, next) => {
     const schedule = scheduleFields(body);
     if (schedule) Object.assign(data, schedule);
 
-    const lunchStart = admittedMinutes(body.lunchStartMinutes);
-    const lunchEnd = admittedMinutes(body.lunchEndMinutes);
-    if (lunchStart !== undefined) {
-      const err = validateLunch(lunchStart, lunchEnd ?? undefined);
-      if (err) {
-        res.status(400).json({ error: err });
-        return;
-      }
-      data.lunchStartMinutes = lunchStart;
-    }
-    if (lunchEnd !== undefined) {
-      data.lunchEndMinutes = lunchEnd;
-    }
-
-    const weeklyLs = admittedWeeklyMinutes(body.weeklyLunchStartMinutes);
-    const weeklyLe = admittedWeeklyMinutes(body.weeklyLunchEndMinutes);
-    if (weeklyLs === null || weeklyLe === null) {
-      res.status(400).json({
-        error: weeklyLs === null
-          ? "weeklyLunchStartMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem almoço"
-          : "weeklyLunchEndMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem almoço",
-      });
-      return;
-    }
-    if ((weeklyLs === undefined) !== (weeklyLe === undefined)) {
-      res.status(400).json({ error: "weeklyLunchStartMinutes e weeklyLunchEndMinutes devem vir juntos (7 valores cada)" });
-      return;
-    }
-    if (weeklyLs !== undefined && weeklyLe !== undefined) {
-      const weeklyErr = validateWeeklyLunch(weeklyLs, weeklyLe);
-      if (weeklyErr) {
-        res.status(400).json({ error: weeklyErr });
-        return;
-      }
-      data.weeklyLunchStartMinutes = weeklyLs;
-      data.weeklyLunchEndMinutes = weeklyLe;
-    }
-
-    const weeklyStart = admittedWeeklyMinutes(body.weeklyStartMinutes);
-    if (weeklyStart === null) {
-      res.status(400).json({
-        error: "weeklyStartMinutes deve ter 7 valores (0=Dom..6=Sáb), cada um 0..1439 ou vazio para sem expediente",
-      });
-      return;
-    }
-    if (weeklyStart !== undefined) {
-      data.weeklyStartMinutes = weeklyStart;
-    }
+    const lunchResult = parseLunchFields(body);
+    if ("error" in lunchResult) { res.status(400).json({ error: lunchResult.error }); return; }
+    Object.assign(data, lunchResult.fields);
 
     if (body.photo !== undefined) {
       const photo = admittedPhoto(body.photo);
@@ -345,7 +337,10 @@ analystsRouter.patch("/:id", async (req, res, next) => {
 
 analystsRouter.delete("/:id", async (req, res, next) => {
   try {
-    const analystId = Number(req.params.id);
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
+    const existing = await prisma.analyst.findUnique({ where: { id: analystId } });
+    if (!existing) { res.status(404).json({ error: "Analista não encontrado" }); return; }
     await prisma.ticket.updateMany({ where: { analystId }, data: { analystId: null } });
     await prisma.analyst.delete({ where: { id: analystId } });
     res.status(204).end();
@@ -356,7 +351,8 @@ analystsRouter.delete("/:id", async (req, res, next) => {
 
 analystsRouter.post("/:id/recalculate", async (req, res, next) => {
   try {
-    const analystId = Number(req.params.id);
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
     const result = await recalculateAnalystQueue(analystId);
     res.json(result);
   } catch (error) {
@@ -366,7 +362,8 @@ analystsRouter.post("/:id/recalculate", async (req, res, next) => {
 
 analystsRouter.post("/:id/reorder", async (req, res, next) => {
   try {
-    const analystId = Number(req.params.id);
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
     if (!(await prisma.analyst.findUnique({ where: { id: analystId } }))) {
       throw new AnalystNotFoundError(analystId);
     }

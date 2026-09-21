@@ -12,7 +12,7 @@ export interface RecalcResult {
   cycleDetected: boolean;
 }
 
-const ACTIVE_STATUSES = [TicketStatus.BACKLOG, TicketStatus.IN_PROGRESS, TicketStatus.PAUSED];
+export const ACTIVE_STATUSES = [TicketStatus.BACKLOG, TicketStatus.IN_PROGRESS, TicketStatus.PAUSED];
 
 /**
  * Motor de recálculo de prazos da fila de um analista.
@@ -117,11 +117,7 @@ export async function recalculateAnalystQueue(analystId: number): Promise<Recalc
 
 export async function recalculateAllQueues(): Promise<RecalcResult[]> {
   const analysts = await prisma.analyst.findMany({ select: { id: true } });
-  const results: RecalcResult[] = [];
-  for (const { id } of analysts) {
-    results.push(await recalculateAnalystQueue(id));
-  }
-  return results;
+  return Promise.all(analysts.map(({ id }) => recalculateAnalystQueue(id)));
 }
 
 /**

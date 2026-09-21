@@ -191,7 +191,3 @@ export function emit(): void {
 export function currentZ(): number {
   return PPM * DENSITY_Z[store.prefs.density];
 }
-
-export function isGridView(v: ViewId): v is GridViewId {
-  return v === "day" || v === "week" || v === "month" || v === "year";
-}

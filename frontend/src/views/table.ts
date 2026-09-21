@@ -59,7 +59,12 @@ export function renderTable(): void {
       case "id": r = a.id - b.id; break;
       case "title": r = a.title.localeCompare(b.title); break;
       case "category": r = a.category.name.localeCompare(b.category.name); break;
-      case "analyst": r = String(a.analystId).localeCompare(String(b.analystId)); break;
+      case "analyst": {
+        const nameA = store.analysts.find((x) => x.id === a.analystId)?.name ?? "";
+        const nameB = store.analysts.find((x) => x.id === b.analystId)?.name ?? "";
+        r = nameA.localeCompare(nameB, "pt-BR");
+        break;
+      }
       case "priority": r = a.priority - b.priority; break;
       case "status": r = a.status.localeCompare(b.status); break;
       case "estimatedMinutes": r = a.estimatedMinutes - b.estimatedMinutes; break;
@@ -80,9 +85,9 @@ let rows = "";
       <td class="tb-id">#${t.id}</td>
       <td class="tb-title" title="${esc(t.title)}">${esc(t.title)}</td>
       <td>${esc(t.category.name)}</td>
-      <td class="tb-analyst">${analyst ? avatarHtml(analyst, 16) + esc(analyst.name) : '<span class="muted">—</span>'}</td>
-      <td><span class="bt-pill" style="--prc:${prc}">P${t.priority}</span></td>
-      <td><span class="st-badge" style="--stc:${stc}">${statusLabel[t.status] || t.status}</span></td>
+      <td class="tb-analyst" data-col="analyst">${analyst ? avatarHtml(analyst, 16) + esc(analyst.name) : '<span class="muted">—</span>'}</td>
+      <td data-col="priority"><span class="bt-pill" style="--prc:${prc}">P${t.priority}</span></td>
+      <td data-col="status"><span class="st-badge" style="--stc:${stc}">${statusLabel[t.status] || t.status}</span></td>
       <td>${fmtNum(t.estimatedMinutes)}</td>
       <td>${t.workedMinutes ? fmtNum(t.workedMinutes) : "—"}</td>
       <td>${t.startDate ? fmtTime(t.startDate) : "—"}</td>
@@ -92,10 +97,6 @@ let rows = "";
     </tr>`;
   }
   if (!rows) rows = '<tr><td colspan="13" class="tb-empty">Nenhum chamado com os filtros atuais.</td></tr>';
-  html += rows + "</tbody></table></div>";
-  el.innerHTML = html;
-  wireTable(sorted);
-if (!rows) rows = '<tr><td colspan="13" class="tb-empty">Nenhum chamado com os filtros atuais.</td></tr>';
   html += rows + "</tbody></table></div>";
   el.innerHTML = html;
   wireTable(sorted);
@@ -190,14 +191,14 @@ function wireTable(rows: Ticket[]): void {
 }
 
 function inlineEdit(e: MouseEvent, rows: Ticket[]): void {
-  const cell = (e.target as HTMLElement).closest<HTMLElement>("td");
+  const cell = (e.target as HTMLElement).closest<HTMLElement>("td[data-col]");
   const tr = cell?.closest<HTMLElement>("tr[data-id]");
   if (!cell || !tr) return;
   const id = Number(tr.dataset.id);
   const t = rows.find((x) => x.id === id);
   if (!t) return;
-  const col = tr.children && [...tr.children].indexOf(cell);
-  if (col === 6) {
+  const col = cell.dataset.col;
+  if (col === "status") {
     const select = document.createElement("select");
     select.innerHTML = STATUS_FLOW.map((s) => `<option value="${s}" ${s === t.status ? "selected" : ""}>${statusLabel[s]}</option>`).join("");
     select.className = "tb-inline";
@@ -214,7 +215,7 @@ function inlineEdit(e: MouseEvent, rows: Ticket[]): void {
     });
     select.addEventListener("blur", () => renderTable());
     e.preventDefault();
-  } else if (col === 5) {
+  } else if (col === "priority") {
     const select = document.createElement("select");
     select.innerHTML = [5, 4, 3, 2, 1].map((p) => `<option value="${p}" ${p === t.priority ? "selected" : ""}>P${p}</option>`).join("");
     select.className = "tb-inline";
@@ -231,7 +232,7 @@ function inlineEdit(e: MouseEvent, rows: Ticket[]): void {
     });
     select.addEventListener("blur", () => renderTable());
     e.preventDefault();
-  } else if (col === 4) {
+  } else if (col === "analyst") {
     const select = document.createElement("select");
     select.innerHTML = `<option value="-1">— sem analista —</option>` + store.analysts.map((a) => `<option value="${a.id}" ${a.id === t.analystId ? "selected" : ""}>${esc(a.name)}</option>`).join("");
     select.className = "tb-inline";
