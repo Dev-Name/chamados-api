@@ -30,25 +30,12 @@
   border: 1px solid color-mix(in srgb, var(--stc) 30%, transparent);
 }
 
-/* expansão suave no hover: o título/meta deixam de cortar e o cartão "cresce"
-   sobre o conteúdo seguinte com fundo sólido */
-.blk { transition: top .3s cubic-bezier(.2, .7, .3, 1), height .3s, opacity .25s, box-shadow .15s, z-index 0s; }
+/* hover contido: apenas elevação sutil — detalhes ficam no popover (`.blk-pop`) */
 .blk:hover {
-  z-index: 20; overflow: visible;
-  background: var(--block-mix);
-  box-shadow: 0 10px 26px rgba(16, 24, 40, .18);
-  outline: 1px solid color-mix(in srgb, var(--prc) 45%, transparent);
+  z-index: 4;
+  box-shadow: 0 10px 22px rgba(16, 24, 40, .16);
   cursor: grab;
 }
-.blk.tiny:hover .bt-title,
-.blk:hover .bt-title,
-.blk:hover .bt-meta {
-  white-space: normal; overflow: visible; text-overflow: clip;
-}
-.blk.tiny:hover { padding: 5px 8px 5px 9px; }
-
-/* quebra de linha mais confortável quando expandido */
-.blk:hover .bt-title { min-height: 0; }
 
 /* grade com fins de semana ocultos: os cabeçalhos seguem o fluxo (5 colunas). */
 .cal-wrap.noweek .inner { min-width: 620px; }

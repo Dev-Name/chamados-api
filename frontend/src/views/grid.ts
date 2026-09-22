@@ -1,9 +1,9 @@
-import { store, currentZ, statusLabel, DAY_MS, weekdays, WEEK_DOW } from "../core/state";
+import { store, statusLabel, DAY_MS, weekdays } from "../core/state";
 import type { Analyst, Ticket, Density } from "../core/state";
-import { capFor, prodCapOfDow, startForDow, lunchForDow, avatarHtml } from "../core/analysts";
+import { capFor, prodCapOfDow, avatarHtml } from "../core/analysts";
 import { blockColor, priorityColor, segmentsOf, usedMinInDay, usedMinInDayCached, clearUsedCache, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
 import { visibleAnalysts, visibleTicket } from "../core/filters";
-import { cap, esc, fmtNum, fmtTime, getCleanName, min2time, sameDay, startOf, fmtHour } from "../core/format";
+import { cap, esc, fmtNum, fmtTime, getCleanName, min2time, sameDay, startOf } from "../core/format";
 import { periodDays } from "../core/nav";
 import { api } from "../core/api";
 import { openTicketModal } from "../ui/modals-ticket";
@@ -11,15 +11,6 @@ import { openQueueModal } from "../ui/modals-queue";
 import { editAnalystFromMenu } from "../ui/modals-analyst";
 import { showToast, toggleBandMenu } from "../ui/chrome";
 import { emit } from "../core/state";
-
-const SHIFT_START = 9;
-
-function dayBaseStart(d: Date): number {
-  const s = visibleAnalysts()
-    .filter((a) => capFor(a, d) > 0)
-    .map((a) => startForDow(a, d.getDay()));
-  return s.length ? Math.min(...s) : SHIFT_START * 60;
-}
 
 function weekFilteredDays(): Date[] {
   const days = periodDays();
@@ -29,48 +20,60 @@ function weekFilteredDays(): Date[] {
   return days;
 }
 
-function hourMarkup(capMinutes: number, startMin: number): string {
-  const z = currentZ();
-  const firstHour = Math.ceil(startMin / 60) * 60;
-  let lines = "";
-  for (let m = firstHour; m < startMin + capMinutes; m += 60) {
-    const y = (m - startMin) * z;
-    const hour = Math.round(m / 60);
-    const isMajor = hour % 3 === 0;
-    lines += `<div class="hour-line${isMajor ? " major" : ""}" style="top:${y}px"></div>`;
-    if (isMajor) lines += `<span class="hour-label" style="top:${y}px">${fmtHour(hour)}</span>`;
+function dayCellHtml(a: Analyst, d: Date, isToday: boolean): string {
+  if (capFor(a, d) <= 0) {
+    return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
-  return lines;
+  return `<div class="day${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" title="Clique para criar um chamado neste dia"></div>`;
 }
 
-function dayCellHtml(a: Analyst, d: Date, dayH: number, now: Date, startMin: number, showHours: boolean): string {
-  const cap = capFor(a, d);
-  if (cap <= 0) {
-    return `<div class="day idle" style="height:${dayH}px" data-a="${a.id}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
-  }
-  let lines = "";
-  if (showHours) lines += hourMarkup(cap, startMin);
-  const lunch = lunchForDow(a, d.getDay());
-  if (lunch) {
-    const lt = (lunch.start - startMin) * currentZ();
-    const lh = (lunch.end - lunch.start) * currentZ();
-    if (lt + lh > 0 && lt < cap * currentZ()) {
-      lines += `<div class="lunch" style="top:${Math.max(lt, 0)}px;height:${Math.min(lh, cap * currentZ() - Math.max(lt, 0))}px" title="Almoço ${min2time(lunch.start)} – ${min2time(lunch.end)}"></div>`;
-    }
-  }
-  const otH = dayH - cap * currentZ();
-  if (otH > 0) lines += `<div class="ot" style="top:${cap * currentZ()}px;height:${otH}px"></div>`;
-  const isToday = sameDay(d, now);
-  const cls = "day" + (isToday ? " todayCell" : "");
-  return `<div class="${cls}" style="height:${dayH}px" data-a="${a.id}" data-iso="${d.toISOString()}"
-              title="Clique para criar um chamado neste dia">
-              ${lines}
-            </div>`;
+interface BlkPopData {
+  id: number;
+  title: string;
+  cat: string;
+  status: string;
+  late: boolean;
+  est: number;
+  worked: number;
+  pct: number;
+  start: string;
+  due: string;
+  dep: string;
 }
 
-function placeBlock(band: HTMLElement, segDate: Date, top: number, height: number, t: Ticket, analystId: number, segFrom: number, segTo: number): void {
-  const cell = band.querySelector<HTMLElement>(`.day[data-iso="${new Date(segDate).toISOString()}"][data-a="${analystId}"]`);
-  if (!cell) return;
+let popEl: HTMLElement | null = null;
+
+function hideBlkPop(): void {
+  if (popEl) {
+    popEl.remove();
+    popEl = null;
+  }
+}
+
+function showBlkPop(p: BlkPopData, anchor: HTMLElement): void {
+  hideBlkPop();
+  const el = document.createElement("div");
+  el.className = "blk-pop";
+  el.innerHTML =
+    `<div class="blk-pop-title"><b>#${p.id}</b> ${esc(p.title)}</div>` +
+    `<div class="blk-pop-row">${esc(p.cat)} • ${esc(p.status)}${p.late ? ' <span class="blk-pop-late">ATRASADO</span>' : ""}</div>` +
+    `<div class="blk-pop-row">${fmtNum(p.est)} min total${p.worked > 0 ? ` • ${fmtNum(p.worked)} min trabalhados (${p.pct}%)` : ""}</div>` +
+    `<div class="blk-pop-row">${esc(p.start)} → ${esc(p.due)}</div>` +
+    (p.dep ? `<div class="blk-pop-row blk-pop-dep">Depende do chamado #${esc(p.dep)}</div>` : "");
+  document.body.appendChild(el);
+  const r = anchor.getBoundingClientRect();
+  const pad = 8;
+  const pw = el.offsetWidth;
+  const ph = el.offsetHeight;
+  let left = r.right + 10;
+  if (left + pw > window.innerWidth - pad) left = Math.max(pad, r.left - pw - 10);
+  const top = Math.min(Math.max(pad, r.top), Math.max(pad, window.innerHeight - ph - pad));
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+  popEl = el;
+}
+
+function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): void {
   const color = blockColor(t);
   const prc = priorityColor(t.priority);
   const stc = stColor(t);
@@ -81,18 +84,14 @@ function placeBlock(band: HTMLElement, segDate: Date, top: number, height: numbe
   const durPart = worked > 0 ? "faltam " + fmtNum(remain) : fmtNum(t.estimatedMinutes);
   const catName =
     store.prefs.colorBy === "priority" ? "P" + t.priority : store.prefs.colorBy === "status" ? statusLabel[t.status] || t.status : t.category.name;
-  const dep = t.dependsOn ? `\n⛓ depende do chamado #${t.dependsOn.id}` : "";
+  const dep = t.dependsOn ? String(t.dependsOn.id) : "";
   const tooltip =
     `#${t.id} ${t.title}\n${catName} • ${statusLabel[t.status] || t.status}${late ? " • ATRASADO" : ""}\n` +
     `${fmtNum(t.estimatedMinutes)} total${worked > 0 ? ` • ${fmtNum(worked)} trabalhado (${pct}%)` : ""}\n` +
-    `${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}${dep}`;
+    `${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}${dep ? `\ndepende do chamado #${dep}` : ""}`;
   const blk = document.createElement("div");
-  blk.className = "blk" + (height < 24 ? " tiny" : "") + (late ? " late" : "");
+  blk.className = "blk" + (late ? " late" : "");
   blk.dataset.id = String(t.id);
-  blk.style.top = Math.max(top + 1, 0) + "px";
-  blk.style.height = Math.max(height - 2, 4) + "px";
-  blk.style.left = "0";
-  blk.style.width = "100%";
   blk.style.setProperty("--c", color);
   blk.style.setProperty("--prc", prc);
   blk.style.setProperty("--stc", stc);
@@ -101,12 +100,33 @@ function placeBlock(band: HTMLElement, segDate: Date, top: number, height: numbe
     `<div class="bt-top"><span class="bt-title">#${t.id} ${esc(t.title)}</span><span class="bt-pill">P${t.priority}</span>` +
     `<span class="st-badge">${statusLabel[t.status] || t.status}</span>` +
     `${late ? '<span class="bt-alert" title="Atrasado"></span>' : ""}</div>` +
-    `<div class="bt-meta">${durPart} · ${min2time(segFrom)}–${min2time(segTo)}</div>` +
+    `<div class="bt-meta">${durPart} · ${min2time(from)}–${min2time(to)}</div>` +
     (worked > 0 ? `<div class="bt-progress"><div class="bt-bar" style="width:${pct}%"></div></div>` : "");
   cell.appendChild(blk);
+  blk.addEventListener("mouseenter", () => {
+    if (drag.active) return;
+    showBlkPop(
+      {
+        id: t.id,
+        title: t.title,
+        cat: catName,
+        status: statusLabel[t.status] || t.status,
+        late,
+        est: t.estimatedMinutes,
+        worked,
+        pct,
+        start: fmtTime(t.startDate),
+        due: fmtTime(t.dueDate),
+        dep,
+      },
+      blk
+    );
+  });
+  blk.addEventListener("mouseleave", hideBlkPop);
 }
 
 export function renderGrid(): void {
+  hideBlkPop();
   const view = store.view;
   if (view === "month") {
     renderMonth();
@@ -129,26 +149,14 @@ function renderDayWeek(isDay: boolean): void {
     calBody.innerHTML = '<div class="empty">Nenhum analista. Adicione em “Analistas”.</div>';
     return;
   }
-  const maxCap = Math.max(
-    1,
-    ...store.analysts.map((a) => Math.max(...WEEK_DOW.map((dow) => capFor(a, new Date(2026, 0, 4 + dow)))))
-  );
-  const z = currentZ();
   const days = isDay ? [startOf(store.refDate)] : weekFilteredDays();
   const nCols = days.length;
-   const rail = "160px";
-   const template = isDay ? `${rail} repeat(${Math.max(ais.length, 1)}, minmax(150px, 1fr))` : `${rail} repeat(${nCols}, minmax(118px, 1fr))`;
+  const rail = "160px";
+  const template = isDay ? `${rail} repeat(${Math.max(ais.length, 1)}, minmax(150px, 1fr))` : `${rail} repeat(${nCols}, minmax(118px, 1fr))`;
   const now = new Date();
-  const d0 = isDay ? days[0] : null;
-  const baseStart = d0 ? dayBaseStart(d0) : SHIFT_START * 60;
-  const dayEnd =
-    isDay && d0
-      ? ais.reduce((mx, a) => (capFor(a, d0) > 0 ? Math.max(mx, startForDow(a, d0.getDay()) + capFor(a, d0)) : mx), baseStart + 60)
-      : baseStart + 60;
-  const dayH = isDay ? Math.max((dayEnd - baseStart) * z, 180) : Math.max((maxCap / 60) * 60 * z, 180);
 
   let head = `<div class="grid-row grid-head${isDay ? " grid-head-day" : ""}" style="grid-template-columns:${template}">
-              <div class="lbl" style="top:0;left:0">ANALISTAS</div>`;
+              <div class="lbl">ANALISTAS</div>`;
   if (isDay) {
     const d = days[0];
     for (const a of ais) {
@@ -156,7 +164,7 @@ function renderDayWeek(isDay: boolean): void {
       const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
       const capM = capFor(a, d);
       const pct = capM > 0 ? Math.round((usedMinInDay(a, d) / capM) * 100) : 0;
-      head += `<div class="dhead dhead-day" style="top:0" data-a="${a.id}" title="${esc(a.name)}">
+      head += `<div class="dhead dhead-day" data-a="${a.id}" title="${esc(a.name)}">
           <span class="dh-line">${avatarHtml(a, 18)}<span class="dh-name" title="${esc(getCleanName(a.name))}">${esc(getCleanName(a.name))}</span></span>
           <span class="dh-meta">${activeCount} ${activeCount === 1 ? "chamado" : "chamados"} · ${off ? "folga" : pct + "%"}</span>
         </div>`;
@@ -175,7 +183,7 @@ function renderDayWeek(isDay: boolean): void {
         }
       }
       const pct = capSum > 0 ? Math.round((usedSum / capSum) * 100) + "%" : "";
-      head += `<div class="dhead ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}" style="top:0">
+      head += `<div class="dhead ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}">
           <span class="dd">${isToday ? '<span class="pill">hoje</span>' : ""}${weekdays[(d.getDay() + 6) % 7]} ${d.getDate()}</span>
           <span class="dload">${pct || "folga"}</span>
         </div>`;
@@ -186,9 +194,10 @@ function renderDayWeek(isDay: boolean): void {
   let rows = "";
   if (isDay) {
     const d = days[0];
+    const dl = `${weekdays[(d.getDay() + 6) % 7]} ${d.getDate()}/${d.getMonth() + 1}`;
     rows = `<div class="grid-row band dayband" data-day="${d.toISOString()}" style="grid-template-columns:${template}">
-        <div class="day-ruler" style="height:${dayH}px">${hourMarkup(dayEnd - baseStart, baseStart)}</div>`;
-    for (const a of ais) rows += dayCellHtml(a, d, dayH, now, baseStart, false);
+        <div class="day-ruler">${esc(dl)}</div>`;
+    for (const a of ais) rows += dayCellHtml(a, d, sameDay(d, now));
     rows += "</div>";
   } else {
     for (const a of ais) {
@@ -217,7 +226,7 @@ function renderDayWeek(isDay: boolean): void {
           ${usageAll ? `<span class="bcap wk" style="color:${wkColor}" title="Ocupado: ${fmtNum(dayTotal)} · disponível: ${fmtNum(usageAll.avail)}">${activeCount} chamado(s) · ${pct}%</span>` : ""}
         </div>`;
 
-      for (const d of days) rows += dayCellHtml(a, d, dayH, now, startForDow(a, d.getDay()), false);
+      for (const d of days) rows += dayCellHtml(a, d, sameDay(d, now));
       rows += "</div>";
     }
   }
@@ -227,66 +236,21 @@ function renderDayWeek(isDay: boolean): void {
   for (const a of ais) {
     const band = isDay ? calBody.querySelector<HTMLElement>(".dayband") : document.getElementById("band-" + a.id);
     if (!band) continue;
-    for (const t of a.tickets) {
-      if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
-      for (const seg of segmentsOf(t, a)) {
-        if (capFor(a, seg.date) <= 0) continue;
-        const inRange = days.some((d) => sameDay(d, seg.date));
-        if (!inRange) continue;
-        const startMin = isDay ? baseStart : startForDow(a, seg.date.getDay());
-        let top = (seg.from - startMin) * z;
-        let bottom = (seg.to - startMin) * z;
-        if (bottom <= 0) continue;
-        const cap = capFor(a, seg.date);
-        if (bottom > cap * z) bottom = cap * z;
-        if (top < 0) top = 0;
-        const shiftEnd = startForDow(a, seg.date.getDay()) + cap;
-        const wFrom = Math.min(Math.max(seg.from, startForDow(a, seg.date.getDay())), shiftEnd);
-        const wTo = Math.min(Math.max(seg.to, startForDow(a, seg.date.getDay())), shiftEnd);
-        placeBlock(band, seg.date, top, Math.max(bottom - top, 4), t, a.id, wFrom, wTo);
+    for (const d of days) {
+      if (capFor(a, d) <= 0) continue;
+      const cell = band.querySelector<HTMLElement>(`.day[data-a="${a.id}"][data-iso="${d.toISOString()}"]`);
+      if (!cell) continue;
+      const items: Array<{ t: Ticket; from: number; to: number }> = [];
+      for (const t of a.tickets) {
+        if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
+        const segs = segmentsOf(t, a).filter((s) => sameDay(s.date, d));
+        if (!segs.length) continue;
+        items.push({ t, from: Math.min(...segs.map((s) => s.from)), to: Math.max(...segs.map((s) => s.to)) });
       }
+      items.sort((x, y) => x.from - y.from || x.t.priority - y.t.priority);
+      for (const it of items) placeBlock(cell, it.t, it.from, it.to);
     }
   }
-  installNowLines();
-}
-
-export function installNowLines(): void {
-  const calBody = document.getElementById("calBody");
-  if (!calBody) return;
-  const now = new Date();
-  const mn = now.getHours() * 60 + now.getMinutes();
-  const z = currentZ();
-  calBody.querySelectorAll<HTMLElement>(".day.todayCell").forEach((cell) => {
-    cell.querySelectorAll(".now-line").forEach((l) => l.remove());
-    const a = store.analysts.find((x) => String(x.id) === cell.dataset.a);
-    const cellDate = new Date(cell.dataset.iso || "");
-    const startMin = store.view === "day" ? dayBaseStart(cellDate) : a ? startForDow(a, cellDate.getDay()) : SHIFT_START * 60;
-    const top = (mn - startMin) * z;
-    if (top < 0) return;
-    const line = document.createElement("div");
-    line.className = "now-line";
-    line.style.top = Math.min(top, cell.clientHeight - 3) + "px";
-    cell.appendChild(line);
-  });
-}
-
-export function moveNow(): void {
-  const calBody = document.getElementById("calBody");
-  if (!calBody) return;
-  const now = new Date();
-  const mn = now.getHours() * 60 + now.getMinutes();
-  const z = currentZ();
-  calBody.querySelectorAll<HTMLElement>(".now-line").forEach((el) => {
-    const cell = el.closest<HTMLElement>(".day");
-    const a = cell ? store.analysts.find((x) => String(x.id) === cell.dataset.a) : null;
-    const cellDate = cell ? new Date(cell.dataset.iso || "") : null;
-    const startMin =
-      cell && cellDate ? store.view === "day" ? dayBaseStart(cellDate) : a ? startForDow(a, cellDate.getDay()) : SHIFT_START * 60 : SHIFT_START * 60;
-    const top = (mn - startMin) * z;
-    const inShift = top >= 0 && !!cell;
-    el.style.display = inShift ? "" : "none";
-    if (inShift && cell) el.style.top = Math.min(top, cell.clientHeight - 3) + "px";
-  });
 }
 
 // ---------- drag & drop ----------
@@ -408,12 +372,9 @@ function dragEnd(e: PointerEvent): void {
   const a = store.analysts.find((x) => x.id === analystId);
   const t = a ? a.tickets.find((x) => x.id === ticketId) : null;
   if (!a || !t) return;
-  const r = cell.getBoundingClientRect();
-  const z = currentZ();
-  const relMin = Math.max(0, (e.clientY - r.top) / z);
   const target = new Date(cell.dataset.iso || "");
-  const minOfDayAt = (store.view === "day" ? dayBaseStart(target) : startForDow(a, target.getDay())) + Math.round(relMin / 15) * 15;
-  target.setMinutes(minOfDayAt, 0, 0);
+  const orig = t.startDate ? new Date(t.startDate) : new Date();
+  target.setHours(orig.getHours(), orig.getMinutes(), 0, 0);
   const order = desiredOrder(a, t, target.getTime());
   lastDragAt = Date.now();
   api(`/analysts/${analystId}/reorder`, "POST", { order })
@@ -849,6 +810,7 @@ function renderYear(): void {
 export function wireGridView(): void {
   const calBody = document.getElementById("calBody")!;
   calBody.addEventListener("pointerdown", (e) => {
+    hideBlkPop();
     const blk = (e.target as HTMLElement).closest<HTMLElement>(".blk");
     if (!blk || (e.button !== undefined && e.button !== 0)) return;
     if (store.view !== "day" && store.view !== "week") return;
@@ -859,4 +821,6 @@ export function wireGridView(): void {
   window.addEventListener("pointerup", dragEnd);
   window.addEventListener("pointercancel", dragEnd);
   calBody.addEventListener("click", handleCalBodyClick);
+  document.getElementById("calWrap")?.addEventListener("scroll", hideBlkPop);
+  window.addEventListener("resize", hideBlkPop);
 }

@@ -7,7 +7,7 @@ import type { ViewId } from "./core/state";
 import { api, loadCategories, loadAnalysts, setReloadHook } from "./core/api";
 import { DEFAULT_FILTERS, fillFilterSelects, visibleAnalysts } from "./core/filters";
 import { periodDays, periodLabel, go, setView } from "./core/nav";
-import { renderGrid, wireGridView, moveNow, cancelDrag } from "./views/grid";
+import { renderGrid, wireGridView, cancelDrag } from "./views/grid";
 import { renderKanban, wireKanbanClick } from "./views/kanban";
 import { renderTable } from "./views/table";
 import { renderLoad } from "./views/load";
@@ -229,7 +229,6 @@ function anyModalOpen(): boolean {
 function startClock(): void {
   setInterval(() => {
     updateLive();
-    moveNow();
   }, 60000);
 }
 
