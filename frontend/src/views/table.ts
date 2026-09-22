@@ -253,6 +253,13 @@ function inlineEdit(e: MouseEvent, rows: Ticket[]): void {
   }
 }
 
+/** Célula CSV segura: escapa aspas e neutraliza injeção de fórmula do Excel. */
+function csvCell(v: unknown): string {
+  const s = String(v);
+  const guarded = /^[=+\-@]/.test(s) ? "'" + s : s;
+  return '"' + guarded.replace(/"/g, '""') + '"';
+}
+
 function exportCsv(): void {
   const rows = tableTickets();
   const header = ["ID", "Título", "Categoria", "Analista", "Prioridade", "Status", "Previsto (min)", "Trabalhado (min)", "Início", "Fim", "Depende de"];
@@ -271,7 +278,7 @@ function exportCsv(): void {
       t.dueDate ? fmtTime(t.dueDate) : "",
       t.dependsOn ? t.dependsOn.id : t.dependsOnTicketId ?? "",
     ]
-      .map((v) => '"' + String(v).replace(/"/g, '""') + '"')
+      .map(csvCell)
       .join(";");
   });
   const csv = "\uFEFF" + [header.join(";"), ...lines].join("\r\n");

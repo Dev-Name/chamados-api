@@ -1,7 +1,7 @@
 import { store } from "../core/state";
 import { visibleAnalysts } from "../core/filters";
 import { capFor, prodCapOfDow, avatarHtml } from "../core/analysts";
-import { usedMinInDay } from "../core/tickets";
+import { usedMinInDayCached } from "../core/tickets";
 import { esc, fmtNum, sameDay, mondayOf } from "../core/format";
 import { DAY_MS } from "../core/state";
 import { openTicketModal } from "../ui/modals-ticket";
@@ -50,7 +50,7 @@ export function renderLoad(): void {
         continue;
       }
       const avail = prodCapOfDow(a, d.getDay());
-      const used = usedMinInDay(a, d);
+      const used = usedMinInDayCached(a, d);
       const frac = avail > 0 ? used / avail : 0;
       rowUsed += used;
       rowCap += avail;
@@ -73,7 +73,7 @@ export function renderLoad(): void {
     for (const a of ais) {
       const c = capFor(a, d);
       if (c <= 0) continue;
-      used += usedMinInDay(a, d);
+      used += usedMinInDayCached(a, d);
       cap += prodCapOfDow(a, d.getDay());
     }
     const frac = cap > 0 ? used / cap : 0;

@@ -117,7 +117,22 @@ export async function recalculateAnalystQueue(analystId: number): Promise<Recalc
 
 export async function recalculateAllQueues(): Promise<RecalcResult[]> {
   const analysts = await prisma.analyst.findMany({ select: { id: true } });
-  return Promise.all(analysts.map(({ id }) => recalculateAnalystQueue(id)));
+  const results = await Promise.all(
+    analysts.map(async ({ id }) => {
+      try {
+        return await recalculateAnalystQueue(id);
+      } catch (error) {
+        // Falha de um analista (ex.: ciclo) não deve derrubar o recálculo dos demais
+        return {
+          analystId: id,
+          scheduled: 0,
+          unschedulable: [{ id: -1, reason: (error as Error).message }],
+          cycleDetected: true,
+        };
+      }
+    })
+  );
+  return results;
 }
 
 /**

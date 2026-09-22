@@ -1,0 +1,252 @@
+/* ============================================================================
+   RESPONSIVO GLOBAL
+   Breakpoints (Tailwind): sm 640 · md 768 · lg 1024 · xl 1280
+   Busca fluida/adaptativa em qualquer resolução sem quebrar layout.
+   ============================================================================ */
+
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Selo de contagem no botão Filtros */
+.fcount {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: var(--primary); color: #fff; border-radius: 9999px;
+  font-size: 11px; font-weight: 800; line-height: 1;
+}
+.fcount[hidden] { display: none; }
+
+/* ---------------------------------------------------------------------------
+   1) MENU LATERAL + NAVEGAÇÃO MOBILE
+   < lg: barra lateral vira drawer off-canvas (+ topbar fixa com hambúrguer).
+   --------------------------------------------------------------------------- */
+@media (max-width: 1023.5px) {
+  header#side {
+    width: 280px; max-width: 85vw;
+    transform: translateX(-102%);
+    transition: transform .24s ease;
+    box-shadow: none;
+  }
+  header#side.open {
+    transform: translateX(0);
+    box-shadow: 0 12px 44px rgba(16, 24, 40, .28);
+  }
+  /* ignorar o modo recolhido no mobile: o drawer sempre abre completo */
+  header#side.min {
+    width: 280px; max-width: 85vw; padding: 14px; align-items: stretch;
+  }
+  header#side.min .side-head { justify-content: flex-start; }
+  header#side.min .side-head .titles { display: block; }
+  header#side.min .side-nav { align-items: stretch; margin: 0 -4px; padding: 0 4px; }
+  header#side.min .side-nav .m-item { width: 100%; height: auto; padding: 10px 11px; justify-content: flex-start; }
+  header#side.min .side-nav .m-item .it { display: inline; }
+  header#side.min .side-nav .m-item .ic { width: 20px; height: 20px; }
+  header#side.min .side-foot { padding: 10px 6px 6px; max-height: none; justify-content: center; }
+  header#side.min .side-live { padding: 4px 10px; }
+  header#side.min .side-foot .live-lbl,
+  header#side.min .side-foot .live-clock { display: inline; }
+  header#side.min .side-toggle { justify-content: flex-start; padding: 10px 11px; }
+  header#side.min .side-toggle .it { display: inline; }
+  header#side.min .side-toggle .cL { display: inline-block; }
+  header#side.min .side-toggle .cR { display: none; }
+
+  #sideOverlay {
+    position: fixed; inset: 0; z-index: 75;
+    background: rgba(11, 15, 25, .5);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #sideOverlay.open { opacity: 1; pointer-events: auto; }
+
+  #sideToggle { display: none; }
+
+  main { margin-left: 0 !important; }
+
+  /* topbar fixa com hambúrguer */
+  .m-topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 80; height: 52px;
+    display: flex; align-items: center; gap: 8px; padding: 0 8px 0 4px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .m-topbar .m-menu {
+    width: 46px; height: 46px; border: none; background: transparent; border-radius: var(--ui-r);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text); cursor: pointer; flex: none;
+  }
+  .m-topbar .m-menu:hover { background: var(--hover); }
+  .m-topbar .m-title { font-weight: 700; font-size: 15px; letter-spacing: -.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+  main { padding-top: 62px; }
+}
+
+@media (min-width: 1024px) {
+  .m-topbar { display: none; }
+  #sideOverlay { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   2) TOOLBARS E FILTROS
+   --------------------------------------------------------------------------- */
+/* Seletor de visão com rolagem horizontal suave em telas menores (< lg) */
+@media (max-width: 1023.5px) {
+  .toolbar-left { max-width: 100%; min-width: 0; }
+  .seg {
+    overflow-x: auto; white-space: nowrap;
+    -ms-overflow-style: none; scrollbar-width: none;
+    max-width: 100%;
+  }
+  .seg::-webkit-scrollbar { display: none; }
+  .seg button { flex: none; }
+  .toolbar { align-items: flex-start; flex-wrap: wrap; }
+  .toolbar-right { margin-left: 0; }
+  .top-card { padding: 6px 12px; }
+  .period-title { min-width: 0; font-size: 15px; }
+  main { padding: 12px 14px 70px; }
+}
+
+/* Tablet (md - lg): filtros em duas linhas — Linha 1 selects, Linha 2 busca w-full */
+@media (min-width: 768px) and (max-width: 1023.5px) {
+  .tb-filters #f-q { flex: 1 1 100%; min-width: 100%; order: 5; }
+  .tb-filters #f-clear { order: 6; }
+}
+
+/* Mobile (< md): oculta selects atrás do botão Filtros; mantém busca + botão */
+@media (max-width: 767.5px) {
+  .tb-filters #fSelects { display: none; }
+  .tb-filters #f-q { flex: 1 1 100%; min-width: 100%; order: 1; }
+  .tb-filters #f-clear { order: 2; }
+
+  /* fechamento do bottom-sheet + painel */
+  .sheet-backdrop {
+    position: fixed; inset: 0; z-index: 110;
+    background: rgba(11, 15, 25, .5);
+  }
+  .f-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 111;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 44px rgba(16, 24, 40, .25);
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 12px;
+    max-height: 82vh; overflow-y: auto;
+  }
+  .f-sheet[hidden] { display: none; }
+  .f-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .f-sheet-head b { font-size: 15px; }
+  .f-sheet-close {
+    width: 46px; height: 46px; border: none; background: transparent; border-radius: var(--ui-r);
+    font-size: 24px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0;
+  }
+  .f-sheet-close:hover { color: var(--text); background: var(--hover); }
+  .f-sheet-body { display: grid; gap: 12px; }
+  .f-sheet-body #fSelects { display: contents; }
+  .f-sheet-body select {
+    width: 100%; height: 44px; min-width: 0;
+    border: 1px solid var(--border); border-radius: var(--ui-r);
+    background: var(--panel); color: var(--text); font: inherit; font-size: 14px;
+    padding: 0 12px; box-sizing: border-box;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   3) VISUALIZAÇÕES DE DADOS
+   --------------------------------------------------------------------------- */
+/* Siglas de 1 letra para os cabeçalhos dos dias (S,T,Q,Q,S,S,D) */
+.dn-short { display: none; }
+@media (max-width: 767.5px) {
+  .dn-short { display: inline; }
+  .dn-long { display: none; }
+}
+
+/* Calendário Mês: células compactas com pontos + contador no mobile */
+@media (max-width: 767.5px) {
+  .month { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .m-head { font-size: var(--fs-sm); padding: 6px 2px; }
+  .mday { padding: 3px; gap: 2px; }
+  .day-header { height: 20px; padding: 0; }
+  .day-number { width: 20px; height: 20px; font-size: var(--fs-sm); }
+  .mbody { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: 1; min-height: 0; }
+  .mdots { display: flex; gap: 3px; align-items: center; justify-content: center; }
+  .mdots i {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c, var(--primary)); flex: none;
+  }
+  .mct {
+    min-width: 34px; height: 34px; border: none; border-radius: 9999px; padding: 0 8px;
+    background: color-mix(in srgb, var(--primary) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+    color: var(--text); font-size: 12px; font-weight: 800; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums; box-sizing: border-box;
+  }
+  .mday .mc-hint { display: none; }
+  .month-pop.sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100%; max-width: 100%;
+    border-radius: 16px 16px 0 0; border-bottom: none;
+    max-height: 74vh;
+    box-shadow: 0 -12px 44px rgba(16, 24, 40, .28);
+  }
+  .ms-backdrop {
+    position: fixed; inset: 0; z-index: 94; background: rgba(11, 15, 25, .5);
+  }
+  .month-pop.sheet { z-index: 96; }
+}
+
+/* Quadro / Kanban: scroll horizontal com encaixe (snap) no mobile */
+@media (max-width: 767.5px) {
+  .kb-board {
+    min-width: 0; overflow-x: auto;
+    scroll-snap-type: x mandatory; scroll-padding: 0 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kb-board .kb-col {
+    flex: 0 0 min(84vw, 320px); min-width: 0;
+    scroll-snap-align: center;
+  }
+  .kb-lane {
+    overflow-x: auto; overflow-y: visible;
+    scroll-snap-type: x mandatory; scroll-padding: 0 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kb-lane .kb-col { flex: 0 0 min(84vw, 300px); min-width: 0; scroll-snap-align: center; }
+}
+
+/* Tabela / Carga / Gantt: rolagem horizontal suave (estruturas já envolvidas) */
+.tb-scroll, .ld-scroll, .g-scroll { -webkit-overflow-scrolling: touch; }
+
+/* Ano: menos colunas para não comprimir os heatmaps */
+@media (max-width: 1023.5px) {
+  .year, .year.d-compact, .year.d-expanded { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+}
+@media (max-width: 640px) {
+  .year, .year.d-compact, .year.d-expanded { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------------------------------------------
+   4) TOQUE E ERGONOMIA (touch targets ≥ 44px) + aproveitamento da largura
+   --------------------------------------------------------------------------- */
+@media (max-width: 767.5px) {
+  main { padding: 62px 8px 70px; }
+  .top-card { flex-wrap: wrap; row-gap: 4px; max-height: none; padding: 6px 10px; }
+  .toolbar { padding: 6px 8px; }
+
+  #filterToggle, #menuSummary, .util-btn, .cs-trigger,
+  .nav-ctrl button, .tb-filters select, .tb-filters #f-q, .tb-filters #f-clear,
+  .seg button, .g-scale-btn, .util-menu button, .btn.subtle, .tb-toolbar select { min-height: 44px; }
+  .nav-ctrl { height: auto; padding: 2px; }
+
+  .side-nav .m-item { min-height: 48px; padding: 12px 11px; }
+  .side-nav .m-item .ic { width: 22px; height: 22px; }
+
+  .mc-more-btn, .mct { min-height: 34px; }
+  .month-pop-row { min-height: 48px; padding: 12px 10px; font-size: 13.5px; }
+
+  /* modais viram bottom-sheets */
+  .modal-backdrop { padding: 0; align-items: flex-end; }
+  .modal { border-radius: 16px 16px 0 0; max-height: 92vh; margin: auto auto 0; }
+  .modal-body { max-height: 70vh; }
+  .row2 { grid-template-columns: 1fr; }
+  #analystsModal .modal { max-width: 100%; }
+}

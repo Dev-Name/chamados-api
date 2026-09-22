@@ -1,16 +1,12 @@
 import { Router } from "express";
 import { prisma, AnalystNotFoundError } from "../lib/errors";
+import { parseId } from "../lib/http";
 import { recalculateAnalystQueue, ACTIVE_STATUSES } from "../services/ticket.service";
 
 export const analystsRouter = Router();
 
 const WEEK = [0, 1, 2, 3, 4, 5, 6];
-
-/** Converte param de rota para inteiro positivo ou retorna null. */
-function parseId(param: string): number | null {
-  const n = Number(param);
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
+const MAX_NAME = 120;
 
 /**
  * Valida um array por dia da semana com 7 elementos onde cada um é
@@ -249,6 +245,10 @@ analystsRouter.post("/", async (req, res, next) => {
       res.status(400).json({ error: "Informe o nome do analista" });
       return;
     }
+    if (name.length > MAX_NAME) {
+      res.status(400).json({ error: `O nome deve ter no máximo ${MAX_NAME} caracteres` });
+      return;
+    }
     const schedule = scheduleFields(req.body ?? {});
     if (!schedule) {
       res.status(400).json({
@@ -303,7 +303,13 @@ analystsRouter.patch("/:id", async (req, res, next) => {
       weeklyStartMinutes?: number[];
       photo?: string | null;
     } = {};
-    if (typeof req.body.name === "string" && req.body.name.trim()) data.name = req.body.name.trim();
+    if (typeof req.body.name === "string" && req.body.name.trim()) {
+      if (req.body.name.trim().length > MAX_NAME) {
+        res.status(400).json({ error: `O nome deve ter no máximo ${MAX_NAME} caracteres` });
+        return;
+      }
+      data.name = req.body.name.trim();
+    }
 
     const body = req.body ?? {};
     const schedule = scheduleFields(body);

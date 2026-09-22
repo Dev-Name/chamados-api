@@ -1,13 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../lib/errors";
+import { parseId } from "../lib/http";
 
 export const categoriesRouter = Router();
 
-/** Converte param de rota para inteiro positivo ou retorna null. */
-function parseId(param: string): number | null {
-  const n = Number(param);
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
+const MAX_NAME = 120;
 
 categoriesRouter.get("/", async (_req, res, next) => {
   try {
@@ -23,6 +20,10 @@ categoriesRouter.post("/", async (req, res, next) => {
     const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
     if (!name) {
       res.status(400).json({ error: "name é obrigatório" });
+      return;
+    }
+    if (name.length > MAX_NAME) {
+      res.status(400).json({ error: `name deve ter no máximo ${MAX_NAME} caracteres` });
       return;
     }
     const category = await prisma.category.create({ data: { name } });
@@ -44,6 +45,10 @@ categoriesRouter.patch("/:id", async (req, res, next) => {
     const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
     if (!name) {
       res.status(400).json({ error: "name é obrigatório" });
+      return;
+    }
+    if (name.length > MAX_NAME) {
+      res.status(400).json({ error: `name deve ter no máximo ${MAX_NAME} caracteres` });
       return;
     }
     const category = await prisma.category.update({ where: { id: categoryId }, data: { name } });

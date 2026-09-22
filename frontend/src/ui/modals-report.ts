@@ -1,11 +1,11 @@
 import { basePriColor, statusLabel, store, weekdays, DAY_MS, analystColors } from "../core/state";
 import { capFor, prodCapOfDow } from "../core/analysts";
-import { usedMinInDay } from "../core/tickets";
+import { usedMinInDayCached } from "../core/tickets";
 import { esc, fmtNum, fmtTime, mondayOf } from "../core/format";
 import { openModal } from "./chrome";
 
 function usedPerDay(a: (typeof store.analysts)[number], days: Date[]): number[] {
-  return days.map((d) => usedMinInDay(a, d));
+  return days.map((d) => usedMinInDayCached(a, d));
 }
 
 function renderReport(): void {
@@ -25,7 +25,7 @@ function renderReport(): void {
     const segsPerAna = store.analysts.map((a) => {
       const cap = capFor(a, date);
       if (cap <= 0) return null;
-      const used = usedMinInDay(a, date);
+      const used = usedMinInDayCached(a, date);
       capSum += cap;
       usedSum += used;
       return { id: a.id, used, cap };

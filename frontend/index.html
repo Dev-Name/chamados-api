@@ -49,6 +49,14 @@
   </button>
 </header>
 
+<div class="m-topbar" id="mTop">
+  <button class="m-menu" id="mMenuBtn" aria-label="Abrir menu" aria-controls="side" aria-expanded="false" title="Abrir menu">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="m-title">Gestão de Chamados</div>
+</div>
+<div id="sideOverlay" hidden></div>
+
 <main>
   <div class="topbar">
     <!-- CAMADA 1: Top header em grid 3 colunas -->
@@ -87,14 +95,14 @@
             <svg class="bi cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="cs-menu" id="densityMenu" role="listbox">
-            <div class="cs-option" data-value="compact" role="option">Densidade: Compacto</div>
-            <div class="cs-option" data-value="comfort" role="option" selected>Densidade: Confortável</div>
-            <div class="cs-option" data-value="expanded" role="option">Densidade: Expandido</div>
+            <div class="cs-option" data-value="compact" role="option" tabindex="0">Densidade: Compacto</div>
+            <div class="cs-option" data-value="comfort" role="option" selected tabindex="0">Densidade: Confortável</div>
+            <div class="cs-option" data-value="expanded" role="option" tabindex="0">Densidade: Expandido</div>
           </div>
         </div>
         <button id="filterToggle" class="active" aria-expanded="true" aria-controls="filterBar" title="Mostrar ou ocultar a barra de filtros">
           <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <span>Filtros</span>
+          <span class="flbl">Filtros</span><span class="fcount" id="fcount" hidden></span>
         </button>
         <button id="menuSummary" title="Mostrar/ocultar a faixa de estatísticas do topo">
           <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -124,10 +132,13 @@
     <!-- CAMADA 3: Barra de Filtros -->
     <div class="tb-filters open" id="filterBar">
       <div class="tb-filters-in">
-        <select id="f-analyst" title="Filtrar por analista"></select>
-        <select id="f-category" title="Filtrar por categoria"></select>
-        <select id="f-status" title="Filtrar por status"></select>
-        <select id="f-priority" title="Filtrar por prioridade"></select>
+        <span id="fSelects">
+          <select id="f-analyst" title="Filtrar por analista"></select>
+          <select id="f-category" title="Filtrar por categoria"></select>
+          <select id="f-status" title="Filtrar por status"></select>
+          <select id="f-priority" title="Filtrar por prioridade"></select>
+        </span>
+        <span id="fBarSelectsHost"></span>
         <input id="f-q" type="search" placeholder="Buscar por título ou #id...">
         <button id="f-clear" class="ghost sm" title="Limpar filtros">Limpar</button>
       </div>
@@ -277,6 +288,16 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<div class="f-sheet" id="filterSheet" hidden aria-hidden="true">
+  <div class="f-sheet-head">
+    <b>Filtros</b>
+    <button class="f-sheet-close" id="fSheetClose" aria-label="Fechar filtros">×</button>
+  </div>
+  <div class="f-sheet-body" id="fSheetBody"></div>
+  <button class="ghost sm" id="fSheetClear">Limpar filtros</button>
+</div>
 
 <script src="/assets/app.js"></script>
 </body>

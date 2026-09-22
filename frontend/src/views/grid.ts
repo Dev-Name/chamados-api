@@ -1,7 +1,7 @@
 import { store, statusLabel, DAY_MS, weekdays } from "../core/state";
 import type { Analyst, Ticket, Density } from "../core/state";
-import { capFor, prodCapOfDow, avatarHtml } from "../core/analysts";
-import { blockColor, priorityColor, segmentsOf, usedMinInDay, usedMinInDayCached, clearUsedCache, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
+import { capFor, prodCapOfDow, avatarHtml, workRange, lunchForDow } from "../core/analysts";
+import { blockColor, priorityColor, segmentsOfCached, usedMinInDay, usedMinInDayCached, clearUsedCache, pctDone, remainOf, isOverdue, stColor } from "../core/tickets";
 import { visibleAnalysts, visibleTicket } from "../core/filters";
 import { cap, esc, fmtNum, fmtTime, getCleanName, min2time, sameDay, startOf } from "../core/format";
 import { periodDays } from "../core/nav";
@@ -9,8 +9,18 @@ import { api } from "../core/api";
 import { openTicketModal } from "../ui/modals-ticket";
 import { openQueueModal } from "../ui/modals-queue";
 import { editAnalystFromMenu } from "../ui/modals-analyst";
-import { showToast, toggleBandMenu } from "../ui/chrome";
+import { showToast, toggleBandMenu, closeFloats } from "../ui/chrome";
 import { emit } from "../core/state";
+
+const WEEKSHORT = ["S", "T", "Q", "Q", "S", "S", "D"];
+const isMobile = () => {
+  const f = window.matchMedia;
+  return typeof f === "function" ? f("(max-width: 767.5px)").matches : false;
+};
+
+function dayNameHtml(i: number): string {
+  return `<span class="dn-long">${weekdays[i]}</span><span class="dn-short">${WEEKSHORT[i]}</span>`;
+}
 
 function weekFilteredDays(): Date[] {
   const days = periodDays();
@@ -24,7 +34,122 @@ function dayCellHtml(a: Analyst, d: Date, isToday: boolean): string {
   if (capFor(a, d) <= 0) {
     return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
-  return `<div class="day${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" title="Clique para criar um chamado neste dia"></div>`;
+  const r = workRange(a, d.getDay());
+  if (!r) {
+    return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
+  }
+  const lunch = lunchForDow(a, d.getDay());
+  return `<div class="day dtcell${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${r.start}" data-e="${r.end}" title="Clique para criar um chamado neste dia">${dtHtml(r, lunch, isToday)}</div>`;
+}
+
+interface TlRange { start: number; end: number }
+
+function hoursInRange(r: TlRange): number[] {
+  const out: number[] = [];
+  let h = Math.floor(r.start / 60) + (r.start % 60 > 0 ? 1 : 0);
+  for (; h * 60 < r.end; h++) out.push(h);
+  return out;
+}
+
+/* semana: mini-régua vertical dentro de cada célula (dia × analista). */
+function dtHtml(r: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
+  const span = r.end - r.start;
+  const p = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
+  let nowMin = -1;
+  if (isToday) {
+    const n = new Date();
+    nowMin = n.getHours() * 60 + n.getMinutes();
+  }
+  let s = "";
+  for (const h of hoursInRange(r)) {
+    s += `<i class="dt-line" style="top:${p(h * 60)}%"></i><span class="dt-hlbl" style="top:${p(h * 60)}%">${h}</span>`;
+  }
+  if (lunch) s += `<i class="dt-lunch" style="top:${p(lunch.start)}%;height:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
+  if (nowMin >= r.start && nowMin <= r.end) s += `<i class="dt-now" style="top:${p(nowMin)}%"></i>`;
+  return `<div class="dt">${s}</div>`;
+}
+
+/* dia: régua horizontal (rótulos de hora) por analista. */
+function tlRuler(r: TlRange, lunch: { start: number; end: number } | null): string {
+  const span = r.end - r.start;
+  const pos = (m: number) => (((m - r.start) / span) * 100).toFixed(2);
+  let s = hoursInRange(r).map((h) => `<span class="tl-h" style="left:${pos(h * 60)}%">${h}:00</span>`).join("");
+  if (lunch) s += `<span class="tl-h tl-lunch-lbl" style="left:${pos(lunch.start)}%">almoço</span>`;
+  return s;
+}
+
+function tlLines(r: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
+  const span = r.end - r.start;
+  const p = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
+  let s = "";
+  for (const h of hoursInRange(r)) s += `<i class="tl-line" style="left:${p(h * 60)}%"></i>`;
+  if (lunch) s += `<i class="tl-lunch" style="left:${p(lunch.start)}%;width:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
+  if (isToday) {
+    const n = new Date();
+    const nowMin = n.getHours() * 60 + n.getMinutes();
+    if (nowMin >= r.start && nowMin <= r.end) s += `<i class="tl-now" style="left:${p(nowMin)}%"></i>`;
+  }
+  return s;
+}
+
+interface TlItem { t: Ticket; from: number; to: number; dur: number }
+
+function tlItems(a: Analyst, d: Date, r: TlRange): TlItem[] {
+  const items: TlItem[] = [];
+  for (const t of a.tickets) {
+    if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
+    const segs = segmentsOfCached(t, a)
+      .filter((s) => sameDay(s.date, d))
+      .map((s) => ({ from: Math.max(s.from, r.start), to: Math.min(s.to, r.end) }))
+      .filter((s) => s.to > s.from);
+    if (!segs.length) continue;
+    items.push({
+      t,
+      from: Math.min(...segs.map((s) => s.from)),
+      to: Math.max(...segs.map((s) => s.to)),
+      dur: Math.max(...segs.map((s) => s.to)) - Math.min(...segs.map((s) => s.from)),
+    });
+  }
+  items.sort((x, y) => x.from - y.from || x.t.priority - y.t.priority);
+  return items;
+}
+
+/* distribui blocos em faixas (vertical no dia, colunas na semana) quando se sobrepõem. */
+function tlTracks(items: TlItem[]): number[] {
+  const ends: number[] = [];
+  return items.map((it) => {
+    for (let i = 0; i < ends.length; i++) {
+      if (ends[i] <= it.from) {
+        ends[i] = it.to;
+        return i;
+      }
+    }
+    ends.push(it.to);
+    return ends.length - 1;
+  });
+}
+
+function usageColor(f: number): string {
+  return f < 0.6 ? "#059669" : f < 0.85 ? "#d97706" : "#dc2626";
+}
+
+function bandLabelHtml(a: Analyst, usage: { activeCount: number; pct: number; dayTotal: number; avail: number } | null): string {
+  const bcap = usage
+    ? `<span class="bcap wk" style="color:${usageColor(usage.avail > 0 ? usage.dayTotal / usage.avail : 0)}" title="Ocupado: ${fmtNum(usage.dayTotal)} · disponível: ${fmtNum(usage.avail)}">${usage.activeCount} chamado(s) · ${usage.pct}%</span>`
+    : "";
+  return `<div class="band-label">
+    <span class="bname">${avatarHtml(a)}<span class="nm" title="${esc(a.name)}">${esc(getCleanName(a.name))}</span>
+      <span class="bmenu-wrap">
+        <button class="bmenu" data-menu="${a.id}" title="Ações rápidas">⋮</button>
+        <div class="band-menu" id="bmenu-${a.id}">
+          <button data-queue="${a.id}" title="Veja e defina a ordem de prioridade dos chamados"><span class="bmenu-ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4.5h11"/><path d="M2.5 8h7.5"/><path d="M2.5 11.5h4.5"/></svg></span>Reorganizar Ordem</button>
+          <button data-recalc="${a.id}" title="Reprograma as datas previstas"><span class="bmenu-ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.2v3l2 1.4"/></svg></span>Reprogramar Chamados</button>
+          <button data-edit-analyst="${a.id}" title="Abre o cadastro do analista"><span class="bmenu-ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.8l2.7 2.7L5.3 13.4 2 14l.6-3.3 7.9-7.9z"/></svg></span>Editar Analista</button>
+        </div>
+      </span>
+    </span>
+    ${bcap}
+  </div>`;
 }
 
 interface BlkPopData {
@@ -67,13 +192,18 @@ function showBlkPop(p: BlkPopData, anchor: HTMLElement): void {
   const ph = el.offsetHeight;
   let left = r.right + 10;
   if (left + pw > window.innerWidth - pad) left = Math.max(pad, r.left - pw - 10);
-  const top = Math.min(Math.max(pad, r.top), Math.max(pad, window.innerHeight - ph - pad));
+  let top = r.top;
+  if (r.bottom + pad + ph > window.innerHeight) {
+    const above = r.top - pad - ph;
+    if (above >= pad) top = above; /* flip vertical */
+  }
+  top = Math.min(Math.max(pad, top), Math.max(pad, window.innerHeight - ph - pad));
   el.style.left = left + "px";
   el.style.top = top + "px";
   popEl = el;
 }
 
-function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): void {
+function buildBlk(cell: HTMLElement, t: Ticket, from: number, to: number): HTMLElement {
   const color = blockColor(t);
   const prc = priorityColor(t.priority);
   const stc = stColor(t);
@@ -84,25 +214,48 @@ function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): voi
   const durPart = worked > 0 ? "faltam " + fmtNum(remain) : fmtNum(t.estimatedMinutes);
   const catName =
     store.prefs.colorBy === "priority" ? "P" + t.priority : store.prefs.colorBy === "status" ? statusLabel[t.status] || t.status : t.category.name;
+  const catDisplay = t.category?.name ? t.category.name : catName;
   const dep = t.dependsOn ? String(t.dependsOn.id) : "";
+  const density = store.prefs.density;
+  const owner = store.analysts.find((x) => x.id === Number(cell.dataset.a));
+  const ownerName = owner ? getCleanName(owner.name) : "";
   const tooltip =
     `#${t.id} ${t.title}\n${catName} • ${statusLabel[t.status] || t.status}${late ? " • ATRASADO" : ""}\n` +
     `${fmtNum(t.estimatedMinutes)} total${worked > 0 ? ` • ${fmtNum(worked)} trabalhado (${pct}%)` : ""}\n` +
     `${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}${dep ? `\ndepende do chamado #${dep}` : ""}`;
   const blk = document.createElement("div");
-  blk.className = "blk" + (late ? " late" : "");
+  blk.className =
+    "blk" +
+    (density === "compact" ? " blk-c" : density === "expanded" ? " blk-x" : "") +
+    (late ? " late" : "");
   blk.dataset.id = String(t.id);
   blk.style.setProperty("--c", color);
   blk.style.setProperty("--prc", prc);
   blk.style.setProperty("--stc", stc);
   blk.title = tooltip;
+  const statusBadge = `<span class="st-badge">${esc(statusLabel[t.status] || t.status)}</span>`;
+  const alertDot = late ? '<span class="bt-alert" title="Atrasado"></span>' : "";
+  const interval = `${min2time(from)}–${min2time(to)}`;
+  const footer =
+    `<div class="bt-meta"><span class="bt-time" title="${esc(interval)}">${interval}</span>` +
+    (density === "compact" ? "" : `<span class="bt-dur">${durPart}</span>`) +
+    `</div>`;
+  const extra =
+    density === "expanded"
+      ? `<div class="bt-extra">` +
+        (late ? '<span class="bt-badge bt-late-badge">ATRASADO</span>' : "") +
+        (dep ? `<span class="bt-badge bt-dep-badge">depende do chamado #${esc(dep)}</span>` : "") +
+        `<span class="bt-badge bt-cat-badge">${esc(catDisplay)}</span>` +
+        (ownerName ? `<span class="bt-badge bt-owner-badge">${esc(ownerName)}</span>` : "") +
+        `</div>`
+      : "";
+  const progress = worked > 0 ? `<div class="bt-progress"><div class="bt-bar" style="width:${pct}%"></div></div>` : "";
   blk.innerHTML =
-    `<div class="bt-top"><span class="bt-title">#${t.id} ${esc(t.title)}</span><span class="bt-pill">P${t.priority}</span>` +
-    `<span class="st-badge">${statusLabel[t.status] || t.status}</span>` +
-    `${late ? '<span class="bt-alert" title="Atrasado"></span>' : ""}</div>` +
-    `<div class="bt-meta">${durPart} · ${min2time(from)}–${min2time(to)}</div>` +
-    (worked > 0 ? `<div class="bt-progress"><div class="bt-bar" style="width:${pct}%"></div></div>` : "");
-  cell.appendChild(blk);
+    `<div class="bt-top"><span class="bt-id">#${t.id}</span><span class="bt-pill">P${t.priority}</span>${statusBadge}${alertDot}</div>` +
+    `<div class="bt-title">${esc(t.title)}</div>` +
+    footer +
+    extra +
+    progress;
   blk.addEventListener("mouseenter", () => {
     if (drag.active) return;
     showBlkPop(
@@ -123,10 +276,35 @@ function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): voi
     );
   });
   blk.addEventListener("mouseleave", hideBlkPop);
+  return blk;
+}
+
+function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): void {
+  cell.appendChild(buildBlk(cell, t, from, to));
+}
+
+/* dia (timeline horizontal): posiciona por horário, faixas verticais quando há sobreposição. */
+function placeBlockRow(cell: HTMLElement, t: Ticket, from: number, to: number, x: number, w: number, topPx: number, slotPx: number): void {
+  const blk = buildBlk(cell, t, from, to);
+  blk.style.left = x + "%";
+  blk.style.width = w + "%";
+  blk.style.top = topPx + "px";
+  blk.style.height = slotPx + "px";
+  cell.appendChild(blk);
+}
+
+/* semana (mini-régua vertical): topo proporcional ao horário; colunas quando colidem. */
+function placeBlockDt(cell: HTMLElement, t: Ticket, from: number, to: number, topPct: number, col: number, cols: number): void {
+  const blk = buildBlk(cell, t, from, to);
+  blk.style.top = topPct + "%";
+  blk.style.left = (col / cols) * 100 + "%";
+  blk.style.width = 100 / cols + "%";
+  cell.appendChild(blk);
 }
 
 export function renderGrid(): void {
   hideBlkPop();
+  hideMonthPop();
   const view = store.view;
   if (view === "month") {
     renderMonth();
@@ -150,25 +328,18 @@ function renderDayWeek(isDay: boolean): void {
     return;
   }
   const days = isDay ? [startOf(store.refDate)] : weekFilteredDays();
-  const nCols = days.length;
-  const rail = "160px";
-  const template = isDay ? `${rail} repeat(${Math.max(ais.length, 1)}, minmax(150px, 1fr))` : `${rail} repeat(${nCols}, minmax(118px, 1fr))`;
+  const rail = "220px";
+  const template = isDay ? `${rail} 1fr` : `${rail} repeat(${days.length}, minmax(140px, 1fr))`;
   const now = new Date();
 
   let head = `<div class="grid-row grid-head${isDay ? " grid-head-day" : ""}" style="grid-template-columns:${template}">
               <div class="lbl">ANALISTAS</div>`;
   if (isDay) {
     const d = days[0];
-    for (const a of ais) {
-      const off = capFor(a, d) <= 0;
-      const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
-      const capM = capFor(a, d);
-      const pct = capM > 0 ? Math.round((usedMinInDay(a, d) / capM) * 100) : 0;
-      head += `<div class="dhead dhead-day" data-a="${a.id}" title="${esc(a.name)}">
-          <span class="dh-line">${avatarHtml(a, 18)}<span class="dh-name" title="${esc(getCleanName(a.name))}">${esc(getCleanName(a.name))}</span></span>
-          <span class="dh-meta">${activeCount} ${activeCount === 1 ? "chamado" : "chamados"} · ${off ? "folga" : pct + "%"}</span>
-        </div>`;
-    }
+    const isToday = sameDay(d, now);
+    head += `<div class="dhead dhead-date${isToday ? " today" : ""}">
+        <span class="dd">${isToday ? '<span class="pill">hoje</span>' : ""}${weekdays[(d.getDay() + 6) % 7]} ${d.getDate()}/${d.getMonth() + 1}</span>
+      </div>`;
   } else {
     for (const d of days) {
       const isToday = sameDay(d, now);
@@ -184,7 +355,7 @@ function renderDayWeek(isDay: boolean): void {
       }
       const pct = capSum > 0 ? Math.round((usedSum / capSum) * 100) + "%" : "";
       head += `<div class="dhead ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}">
-          <span class="dd">${isToday ? '<span class="pill">hoje</span>' : ""}${weekdays[(d.getDay() + 6) % 7]} ${d.getDate()}</span>
+          <span class="dd">${isToday ? '<span class="pill">hoje</span>' : ""}${dayNameHtml((d.getDay() + 6) % 7)} ${d.getDate()}</span>
           <span class="dload">${pct || "folga"}</span>
         </div>`;
     }
@@ -194,37 +365,42 @@ function renderDayWeek(isDay: boolean): void {
   let rows = "";
   if (isDay) {
     const d = days[0];
-    const dl = `${weekdays[(d.getDay() + 6) % 7]} ${d.getDate()}/${d.getMonth() + 1}`;
-    rows = `<div class="grid-row band dayband" data-day="${d.toISOString()}" style="grid-template-columns:${template}">
-        <div class="day-ruler">${esc(dl)}</div>`;
-    for (const a of ais) rows += dayCellHtml(a, d, sameDay(d, now));
-    rows += "</div>";
+    const isToday = sameDay(d, now);
+    for (const a of ais) {
+      const r = workRange(a, d.getDay());
+      const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
+      if (!r) {
+        rows += `<div class="grid-row band dayrow" data-a="${a.id}" style="grid-template-columns:${template}">
+          ${bandLabelHtml(a, null)}
+          <div class="daytl"><div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}"><span class="idle-label">fora do expediente</span></div></div>
+        </div>`;
+        continue;
+      }
+      const avail = prodCapOfDow(a, d.getDay());
+      const used = usedMinInDay(a, d);
+      rows += `<div class="grid-row band dayrow" data-a="${a.id}" style="grid-template-columns:${template}">
+        ${bandLabelHtml(a, { activeCount, pct: avail > 0 ? Math.round((used / avail) * 100) : 0, dayTotal: used, avail })}
+        <div class="daytl">
+          <div class="tl-ruler">${tlRuler(r, lunchForDow(a, d.getDay()))}</div>
+          <div class="day tl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${r.start}" data-e="${r.end}">
+            ${tlLines(r, lunchForDow(a, d.getDay()), isToday)}
+          </div>
+        </div>
+      </div>`;
+    }
   } else {
     for (const a of ais) {
       const workDays = days.filter((d) => capFor(a, d) > 0);
       const freeAvail = workDays.reduce((s, d) => s + prodCapOfDow(a, d.getDay()), 0);
       const usageAll = workDays.length
-        ? { used: workDays.reduce((s, d) => s + usedMinInDay(a, d), 0), avail: freeAvail }
+        ? { used: workDays.reduce((s, d) => s + usedMinInDayCached(a, d), 0), avail: freeAvail }
         : null;
       const pct = usageAll ? Math.round((usageAll.used / usageAll.avail) * 100) : 0;
-      const wkColor = !usageAll ? "" : usageAll.used / usageAll.avail < 0.6 ? "#059669" : usageAll.used / usageAll.avail < 0.85 ? "#d97706" : "#dc2626";
       const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
-      const dayTotal = workDays.reduce((s, d) => s + usedMinInDay(a, d), 0);
+      const dayTotal = workDays.reduce((s, d) => s + usedMinInDayCached(a, d), 0);
 
       rows += `<div class="grid-row band" id="band-${a.id}" data-a="${a.id}" style="grid-template-columns:${template}">
-        <div class="band-label">
-          <span class="bname">${avatarHtml(a)}<span class="nm" title="${esc(a.name)}">${esc(getCleanName(a.name))}</span>
-            <span class="bmenu-wrap">
-              <button class="bmenu" data-menu="${a.id}" title="Ações rápidas">⋮</button>
-              <div class="band-menu" id="bmenu-${a.id}">
-                <button data-queue="${a.id}" title="Veja e defina a ordem de prioridade dos chamados"><span class="bmenu-ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4.5h11"/><path d="M2.5 8h7.5"/><path d="M2.5 11.5h4.5"/></svg></span>Reorganizar Ordem</button>
-                <button data-recalc="${a.id}" title="Reprograma as datas previstas"><span class="bmenu-ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.2v3l2 1.4"/></svg></span>Reprogramar Chamados</button>
-                <button data-edit-analyst="${a.id}" title="Abre o cadastro do analista"><span class="bmenu-ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.8l2.7 2.7L5.3 13.4 2 14l.6-3.3 7.9-7.9z"/></svg></span>Editar Analista</button>
-              </div>
-            </span>
-          </span>
-          ${usageAll ? `<span class="bcap wk" style="color:${wkColor}" title="Ocupado: ${fmtNum(dayTotal)} · disponível: ${fmtNum(usageAll.avail)}">${activeCount} chamado(s) · ${pct}%</span>` : ""}
-        </div>`;
+        ${bandLabelHtml(a, usageAll ? { activeCount, pct, dayTotal, avail: usageAll.avail } : null)}`;
 
       for (const d of days) rows += dayCellHtml(a, d, sameDay(d, now));
       rows += "</div>";
@@ -234,21 +410,43 @@ function renderDayWeek(isDay: boolean): void {
   calBody.innerHTML = head + rows;
 
   for (const a of ais) {
-    const band = isDay ? calBody.querySelector<HTMLElement>(".dayband") : document.getElementById("band-" + a.id);
+    const band = isDay
+      ? calBody.querySelector<HTMLElement>(`.dayrow[data-a="${a.id}"]`)
+      : document.getElementById("band-" + a.id);
     if (!band) continue;
     for (const d of days) {
       if (capFor(a, d) <= 0) continue;
       const cell = band.querySelector<HTMLElement>(`.day[data-a="${a.id}"][data-iso="${d.toISOString()}"]`);
       if (!cell) continue;
-      const items: Array<{ t: Ticket; from: number; to: number }> = [];
-      for (const t of a.tickets) {
-        if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
-        const segs = segmentsOf(t, a).filter((s) => sameDay(s.date, d));
-        if (!segs.length) continue;
-        items.push({ t, from: Math.min(...segs.map((s) => s.from)), to: Math.max(...segs.map((s) => s.to)) });
+      const r = workRange(a, d.getDay());
+      if (!r) continue;
+      const items = tlItems(a, d, r);
+      if (isDay) {
+        const css = getComputedStyle(document.documentElement);
+        const slot = parseInt(css.getPropertyValue("--tl-slot"), 10) || 56;
+        const gap = parseInt(css.getPropertyValue("--tl-gap"), 10) || 10;
+        const tracks = tlTracks(items);
+        const span = r.end - r.start;
+        let h = 0;
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const x = ((it.from - r.start) / span) * 100;
+          const w = Math.max(((it.to - it.from) / span) * 100, 8);
+          const topPx = tracks[i] * (slot + gap);
+          h = Math.max(h, topPx + slot);
+          placeBlockRow(cell, it.t, it.from, it.to, x, w, topPx, slot);
+        }
+        cell.style.height = Math.max(h + 8, 64) + "px";
+      } else {
+        const tracks = tlTracks(items);
+        const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
+        const span = r.end - r.start;
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const top = ((it.from - r.start) / span) * 100;
+          placeBlockDt(cell, it.t, it.from, it.to, top, tracks[i], cols);
+        }
       }
-      items.sort((x, y) => x.from - y.from || x.t.priority - y.t.priority);
-      for (const it of items) placeBlock(cell, it.t, it.from, it.to);
     }
   }
 }
@@ -360,6 +558,24 @@ function dragEndSafe(): void {
   drag.id = null;
 }
 
+/* converte a posição do cursor (x no dia, y na semana) em minutos dentro do expediente. */
+function cursorTl(cell: HTMLElement, e: PointerEvent): number | null {
+  const s = cell.dataset.s;
+  const eN = cell.dataset.e;
+  if (s == null || eN == null) return null;
+  const start = parseInt(s, 10);
+  const end = parseInt(eN, 10);
+  if (!(end > start)) return null;
+  const r = cell.getBoundingClientRect();
+  let f: number;
+  if (cell.classList.contains("tl")) {
+    f = (e.clientX - r.left) / Math.max(r.width, 1);
+  } else {
+    f = (e.clientY - r.top) / Math.max(r.height, 1);
+  }
+  return Math.min(Math.max(start + Math.round((end - start) * f), start), end - 1);
+}
+
 function dragEnd(e: PointerEvent): void {
   if (!drag.active) return;
   const shallMove = drag.moved;
@@ -374,7 +590,11 @@ function dragEnd(e: PointerEvent): void {
   if (!a || !t) return;
   const target = new Date(cell.dataset.iso || "");
   const orig = t.startDate ? new Date(t.startDate) : new Date();
+  const dropMin = cursorTl(cell, e);
   target.setHours(orig.getHours(), orig.getMinutes(), 0, 0);
+  if (dropMin != null) {
+    target.setHours(Math.floor(dropMin / 60), dropMin % 60, 0, 0);
+  }
   const order = desiredOrder(a, t, target.getTime());
   lastDragAt = Date.now();
   api(`/analysts/${analystId}/reorder`, "POST", { order })
@@ -416,6 +636,14 @@ function handleCalBodyClick(e: MouseEvent): void {
     return;
   }
   if (Date.now() - lastDragAt < 350) return;
+  const moreBtn = t.closest<HTMLElement>("[data-more]");
+  if (moreBtn) {
+    e.stopPropagation();
+    const open = !openedMonthPop();
+    hideMonthPop();
+    if (open && moreBtn.dataset.more) showMonthMore(moreBtn);
+    return;
+  }
   const blk = t.closest<HTMLElement>(".blk");
   if (blk) {
     openTicketModal(Number(blk.dataset.id), null);
@@ -423,6 +651,11 @@ function handleCalBodyClick(e: MouseEvent): void {
   }
   const mday = t.closest<HTMLElement>(".mday");
   if (mday && !mday.classList.contains("out")) {
+    if (isMobile() && (monthChipsByDay.get(mday.dataset.iso || "") || []).length) {
+      e.stopPropagation();
+      showMonthMoreIso(mday.dataset.iso || "", mday);
+      return;
+    }
     store.refDate = startOf(new Date(mday.dataset.iso || ""));
     store.view = "day";
     emit();
@@ -475,8 +708,9 @@ function monthChipHtml(ch: MonthChip, density: Density): string {
   const tip =
     density === "compact" ? esc(`#${ch.id} ${ch.t} · ${ch.title}`) : esc(`#${ch.id} ${ch.title}`);
   const initial = esc((ch.analyst.name || "?")[0]);
+  const hours = Math.round((ch.hoursMin / 60) * 10) / 10;
   if (density === "compact") {
-    return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><i class="mc-sw"></i><b>#${ch.id}</b></div>`;
+    return `<div class="mc mc-c" style="--c:${ch.c}" title="${tip}"><b>#${ch.id}</b><span class="mc-t2">${esc(ch.title)}</span></div>`;
   }
   if (density === "expanded") {
     return `<div class="month-card" title="${tip}">
@@ -486,12 +720,18 @@ function monthChipHtml(ch: MonthChip, density: Density): string {
           <span class="month-card-id">#${ch.id}</span>
           <span class="month-card-pri">P${ch.pri}</span>
         </div>
-        <span class="month-card-h">${fmtNum(ch.hoursMin)}</span>
+        <span class="month-card-h">${fmtNum(hours)}h</span>
       </div>
       <div class="month-card-t" title="${esc(ch.title)}">${esc(ch.title)}</div>
     </div>`;
   }
-  return `<div class="mc" style="--c:${ch.c}"><span class="t">${ch.t}</span><span class="tt">#${ch.id} ${esc(ch.title)}</span></div>`;
+  return `<div class="mc mc-co" style="--c:${ch.c}" title="${tip}">
+      <div class="mc-head">
+        <span class="mc-id">#${ch.id}</span>
+        <span class="mc-pri">P${ch.pri}</span>
+      </div>
+      <span class="mc-title">${esc(ch.title)}</span>
+    </div>`;
 }
 
 function monthMatrix(y: number, m: number): Array<{ d: Date; out: boolean }> {
@@ -515,9 +755,11 @@ function renderMonth(): void {
   const m = store.refDate.getMonth();
   const now = new Date();
   const density = store.prefs.density;
-  const limit = density === "compact" ? 6 : 3;
+  const limit = density === "compact" ? 4 : density === "expanded" ? 2 : 3;
+  monthChipsByDay = new Map();
+  const mobile = isMobile();
   let html = `<div class="month m-${density}">`;
-  for (let i = 0; i < 7; i++) html += `<div class="m-head">${weekdays[i]}</div>`;
+  for (let i = 0; i < 7; i++) html += `<div class="m-head">${mobile ? WEEKSHORT[i] : dayNameHtml(i)}</div>`;
   for (const c of monthMatrix(y, m)) {
     const d = c.d;
     const isToday = sameDay(d, now);
@@ -536,7 +778,7 @@ function renderMonth(): void {
         let matched = false;
         let mins = 0;
         let firstFrom = 0;
-        for (const seg of segmentsOf(t, a)) {
+        for (const seg of segmentsOfCached(t, a)) {
           if (sameDay(seg.date, d)) {
             if (!matched) firstFrom = seg.from;
             matched = true;
@@ -558,6 +800,7 @@ function renderMonth(): void {
       }
     }
     chips.sort((a, b) => a.pri - b.pri || b.hoursMin - a.hoursMin);
+    monthChipsByDay.set(d.toISOString(), chips);
     const shown = chips.slice(0, limit);
     const more = chips.length - shown.length;
     const loadPct = capSum > 0 ? Math.min((usedSum / capSum) * 100, 100) : 0;
@@ -566,23 +809,101 @@ function renderMonth(): void {
         <div class="day-header">
           <span class="day-number${isToday ? " today-badge" : ""}">${d.getDate()}</span>
         </div>
-        <div class="mbody${density === "expanded" ? " day-cell-content" : ""}">`;
+        <div class="mbody">`;
     if (c.out) html += '<div class="mc-more"></div>';
-    else {
+    else if (mobile) {
+      html += `<span class="mdots">${chips.slice(0, 5).map((ch) => `<i style="--c:${ch.c}"></i>`).join("")}</span>`;
+      if (chips.length)
+        html += `<button class="mct" type="button" data-more="${d.toISOString()}" title="Ver ${chips.length} ${chips.length === 1 ? "chamado" : "chamados"}">${chips.length}</button>`;
+    } else {
       for (const ch of shown) html += monthChipHtml(ch, density);
-      if (more > 0)
-        html +=
-          density === "expanded"
-            ? `<button class="month-more" type="button">+ ${more} chamados</button>`
-            : `<div class="mc more">+${more}</div>`;
       html += '<div class="mc-hint">+</div>';
     }
-    html += `</div>
-        ${c.out ? "" : usedSum > 0 ? `<div class="mload"><div class="tr"><i style="width:${loadPct}%"></i></div><b>${fmtNum(Math.min(usedSum, capSum))}</b></div>` : ""}
+    html += `</div>`;
+    if (!c.out && !mobile && more > 0)
+      html += `<button class="mc-more-btn" type="button" data-more="${d.toISOString()}">+ ${more} ${more === 1 ? "chamado" : "chamados"}</button>`;
+    html += `${c.out || mobile ? "" : usedSum > 0 ? `<div class="mload"><div class="tr"><i style="width:${loadPct}%"></i></div><b>${fmtNum(Math.min(usedSum, capSum))}</b></div>` : ""}
       </div>`;
   }
   html += "</div>";
   calBody.innerHTML = html;
+}
+
+let monthChipsByDay = new Map<string, MonthChip[]>();
+let monthPopEl: HTMLElement | null = null;
+let monthSheetBd: HTMLElement | null = null;
+
+function hideMonthPop(): void {
+  if (!monthPopEl) return;
+  monthPopEl.remove();
+  monthPopEl = null;
+  if (monthSheetBd) {
+    monthSheetBd.remove();
+    monthSheetBd = null;
+  }
+}
+
+export function openedMonthPop(): boolean {
+  return monthPopEl !== null;
+}
+
+/** Fecha o painel "+N chamados" (popover ou bottom-sheet). Retorna se havia algo aberto. */
+export function closeMonthPop(): boolean {
+  if (!monthPopEl) return false;
+  hideMonthPop();
+  return true;
+}
+
+function showMonthMoreIso(iso: string, anchor: HTMLElement): void {
+  hideMonthPop();
+  const chips = monthChipsByDay.get(iso) || [];
+  if (!chips.length) return;
+  const d = new Date(iso);
+  const mobile = isMobile();
+  const el = document.createElement("div");
+  el.className = "month-pop" + (mobile ? " sheet" : "");
+  el.innerHTML =
+    `<div class="month-pop-head">${esc(weekdays[(d.getDay() + 6) % 7])} ${d.getDate()}/${d.getMonth() + 1} · ${chips.length} ${chips.length === 1 ? "chamado" : "chamados"}</div>` +
+    chips
+      .map(
+        (c) =>
+          `<button type="button" class="month-pop-row" data-tid="${c.id}">` +
+          `<span class="mp-id">#${c.id}</span>` +
+          `<span class="mp-title" title="${esc(c.title)}">${esc(c.title)}</span>` +
+          `<span class="mp-pri">P${c.pri}</span>` +
+          `<span class="mp-hours">${fmtNum(Math.round((c.hoursMin / 60) * 10) / 10)}h</span>` +
+          `<span class="mp-time">${esc(c.t)}</span>` +
+          `</button>`
+      )
+      .join("") +
+    '<div class="month-pop-note">clique para abrir o chamado</div>';
+  document.body.appendChild(el);
+  if (mobile) {
+    const bd = document.createElement("div");
+    bd.className = "ms-backdrop";
+    document.body.appendChild(bd);
+    monthSheetBd = bd;
+    monthPopEl = el;
+    return;
+  }
+  const r = anchor.getBoundingClientRect();
+  const pad = 8;
+  const rect = { w: el.offsetWidth, h: el.offsetHeight };
+  let left = r.left;
+  if (left + rect.w > window.innerWidth - pad) left = Math.max(pad, r.right - rect.w);
+  let top = r.bottom + 6;
+  if (top + rect.h > window.innerHeight - pad) {
+    const above = r.top - 6 - rect.h;
+    if (above >= pad) top = above; /* flip vertical */
+  }
+  top = Math.min(Math.max(pad, top), Math.max(pad, window.innerHeight - rect.h - pad));
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+  monthPopEl = el;
+}
+
+function showMonthMore(btn: HTMLElement): void {
+  showMonthMoreIso(btn.dataset.more || "", btn);
 }
 
 // ---------- visão anual ----------
@@ -704,7 +1025,7 @@ function renderYear(): void {
 
     let heat = "";
     if (density === "comfort") {
-      heat = `<div class="yhd">${weekdays.map((w) => `<span title="${w}">${w}</span>`).join("")}</div>`;
+      heat = `<div class="yhd">${weekdays.map((_, i) => `<span title="${weekdays[i]}">${dayNameHtml(i)}</span>`).join("")}</div>`;
       for (const c of monthMatrix(y, mm)) {
         if (c.out) {
           heat += `<div class="yday sp0"></div>`;
@@ -723,7 +1044,7 @@ function renderYear(): void {
         for (const a of ais) {
           for (const t of a.tickets) {
             if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
-            for (const seg of segmentsOf(t, a)) {
+            for (const seg of segmentsOfCached(t, a)) {
               if (sameDay(seg.date, c.d)) {
                 if (listed < 4) tipLines.push(`#${t.id} ${t.title}`);
                 listed++;
@@ -821,6 +1142,24 @@ export function wireGridView(): void {
   window.addEventListener("pointerup", dragEnd);
   window.addEventListener("pointercancel", dragEnd);
   calBody.addEventListener("click", handleCalBodyClick);
-  document.getElementById("calWrap")?.addEventListener("scroll", hideBlkPop);
-  window.addEventListener("resize", hideBlkPop);
+  document.getElementById("calWrap")?.addEventListener("scroll", () => {
+    hideBlkPop();
+    hideMonthPop();
+    closeFloats();
+  });
+  window.addEventListener("resize", () => {
+    hideBlkPop();
+    hideMonthPop();
+  });
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    const row = t.closest<HTMLElement>(".month-pop-row");
+    if (row) {
+      hideMonthPop();
+      openTicketModal(Number(row.dataset.tid), null);
+      return;
+    }
+    if (!openedMonthPop()) return;
+    if (!t.closest(".month-pop")) hideMonthPop();
+  });
 }

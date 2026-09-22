@@ -73,6 +73,19 @@ export function segmentsOf(t: Ticket, a?: Analyst | null): Segment[] {
   return segs;
 }
 
+// Cache de segmentsOf por render — chave "ticketId", limpo a cada emissão de store.
+let _segCache: Map<number, Segment[]> | null = null;
+
+/** Versão com cache de segmentsOf. Deve ser usada dentro de um ciclo de render. */
+export function segmentsOfCached(t: Ticket, a?: Analyst | null): Segment[] {
+  if (!_segCache) _segCache = new Map();
+  const hit = _segCache.get(t.id);
+  if (hit) return hit;
+  const segs = segmentsOf(t, a);
+  _segCache.set(t.id, segs);
+  return segs;
+}
+
 export function usedMinInDay(a: Analyst, date: Date): number {
   const cap = capFor(a, date);
   if (cap <= 0) return 0;
@@ -82,7 +95,7 @@ export function usedMinInDay(a: Analyst, date: Date): number {
   let used = 0;
   for (const t of a.tickets) {
     if (t.status === "COMPLETED") continue;
-    for (const seg of segmentsOf(t, a)) {
+    for (const seg of segmentsOfCached(t, a)) {
       const ss = seg.date.getTime() + seg.from * 60000;
       const se = seg.date.getTime() + seg.to * 60000;
       const ov = Math.min(se, s1) - Math.max(ss, s0);
@@ -105,9 +118,10 @@ export function usedMinInDayCached(a: Analyst, date: Date): number {
   return v;
 }
 
-/** Limpa o cache de usedMinInDay. Deve ser chamado ao início de cada render. */
+/** Limpa os caches de usedMinInDay e segmentsOf. Deve ser chamado ao início de cada render. */
 export function clearUsedCache(): void {
   _usedCache = null;
+  _segCache = null;
 }
 
 export function allTickets(): Ticket[] {

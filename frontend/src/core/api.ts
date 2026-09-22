@@ -1,12 +1,25 @@
 import type { Analyst, Category } from "./state";
 import { store } from "./state";
 
+function setConn(ok: boolean): void {
+  document.body.dataset.conn = ok ? "on" : "off";
+  const lbl = document.querySelector(".live-lbl");
+  if (lbl) lbl.textContent = ok ? "Ao Vivo" : "Offline";
+}
+
 export async function api<T = unknown>(url: string, method = "GET", body?: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    setConn(false);
+    throw err;
+  }
+  setConn(true);
   if (!res.ok) {
     let msg = "Erro " + res.status;
     try {

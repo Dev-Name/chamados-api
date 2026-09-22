@@ -25,8 +25,8 @@ const js = await readFile("public/assets/app.js", "utf8");
 const css = await readFile("public/assets/app.css", "utf8");
 
 const inlined = html
-  .replace('<link rel="stylesheet" href="/assets/app.css">', `<style>${css}</style>`)
-  .replace('<script src="/assets/app.js"></script>', `<script>${js}</script>`);
+  .replace('<link rel="stylesheet" href="/assets/app.css">', () => `<style>${css}</style>`)
+  .replace('<script src="/assets/app.js"></script>', () => `<script>${js}</script>`);
 
 await writeFile("public/index.html", inlined, "utf8");
 

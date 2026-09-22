@@ -1,4 +1,4 @@
-import { savePrefs, store } from "../core/state";
+import { savePrefs, store, emit } from "../core/state";
 
 let toastTimer = 0;
 
@@ -27,13 +27,72 @@ export function anyModalOpen(): boolean {
   return !!document.querySelector(".modal-backdrop.open");
 }
 
+/* ---------- camadas flutuantes portalizadas no <body> (root da aplicação)
+   Posicionamento fixo na viewport com flip vertical/horizontal: nunca cortado
+   por containers com rolagem (#calWrap) nem pelas bordas da janela. ---------- */
+interface FloatRec { parent: Node; next: Node | null }
+const portaled = new Map<HTMLElement, FloatRec>();
+
+function portalFloat(el: HTMLElement, anchor: HTMLElement): void {
+  if (!portaled.has(el)) {
+    const parent = el.parentElement;
+    if (parent) {
+      portaled.set(el, { parent, next: el.nextSibling });
+      document.body.appendChild(el);
+    }
+  }
+  el.style.position = "fixed";
+  el.style.left = "0px";
+  el.style.top = "0px";
+  const r = anchor.getBoundingClientRect();
+  const pad = 8;
+  const gap = 6;
+  const mw = el.offsetWidth;
+  const mh = el.offsetHeight;
+  const below = r.bottom + gap;
+  const above = r.top - gap - mh;
+  let top = below;
+  if (below + mh > window.innerHeight - pad && above >= pad) top = above; /* flip vertical */
+  top = Math.min(Math.max(pad, top), Math.max(pad, window.innerHeight - mh - pad));
+  let left = r.left;
+  if (left + mw > window.innerWidth - pad) left = Math.max(pad, r.right - mw); /* flip horizontal */
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+}
+
+function unportalFloat(el: HTMLElement): void {
+  const rec = portaled.get(el);
+  el.style.position = "";
+  el.style.left = "";
+  el.style.top = "";
+  if (!rec) return;
+  portaled.delete(el);
+  if (rec.next && rec.next.parentNode === rec.parent) rec.parent.insertBefore(el, rec.next);
+  else rec.parent.appendChild(el);
+}
+
 function closeBandMenus(): void {
-  document.querySelectorAll(".band-menu.show").forEach((m) => m.classList.remove("show"));
-  document.querySelectorAll(".bmenu.open").forEach((b) => {
-    b.classList.remove("open");
-    const lbl = b.closest(".band-label") as HTMLElement | null;
-    if (lbl) lbl.style.zIndex = "";
+  document.querySelectorAll<HTMLElement>(".band-menu.show").forEach((m) => {
+    m.classList.remove("show");
+    unportalFloat(m);
   });
+  document.querySelectorAll(".bmenu.open").forEach((b) => b.classList.remove("open"));
+}
+
+function closeDensityMenu(): void {
+  const menu = document.getElementById("densityMenu");
+  const trig = document.querySelector(".cs-trigger");
+  if (menu) {
+    menu.classList.remove("open");
+    unportalFloat(menu);
+  }
+  if (trig) trig.setAttribute("aria-expanded", "false");
+}
+
+/** Fecha qualquer camada flutuante portalizada (menus de analista e densidade). */
+export function closeFloats(): void {
+  closeBandMenus();
+  closeDensityMenu();
 }
 
 export function toggleBandMenu(id: number | string, btn: HTMLElement): void {
@@ -43,8 +102,7 @@ export function toggleBandMenu(id: number | string, btn: HTMLElement): void {
   if (m && !open) {
     m.classList.add("show");
     btn.classList.add("open");
-    const lbl = btn.closest(".band-label") as HTMLElement | null;
-    if (lbl) lbl.style.zIndex = "60";
+    portalFloat(m, btn);
   }
 }
 
@@ -85,10 +143,7 @@ export function syncDensityUI(): void {
   const lbl = document.getElementById("densityLabel");
   const opt = document.querySelector<HTMLElement>("#densityMenu .cs-option[selected]");
   if (lbl && opt) lbl.textContent = opt.textContent ?? "";
-  const trig = document.querySelector(".cs-trigger");
-  if (trig) trig.setAttribute("aria-expanded", "false");
-  const menu = document.getElementById("densityMenu");
-  if (menu) menu.classList.remove("open");
+  closeDensityMenu();
 }
 
 export function syncWeekendUI(): void {
@@ -173,32 +228,57 @@ export function wireChrome(): void {
       opt.setAttribute("selected", "");
       syncDensityUI();
       applyUiPrefs();
+      emit();
     }
-    const menu = document.getElementById("densityMenu");
-    if (menu) menu.classList.remove("open");
-    const trig = document.querySelector(".cs-trigger");
-    if (trig) trig.setAttribute("aria-expanded", "false");
+    closeDensityMenu();
   });
 
-  const csTrigger = document.querySelector(".cs-trigger");
+  const csTrigger = document.querySelector<HTMLElement>(".cs-trigger");
   csTrigger?.addEventListener("click", (e) => {
     e.stopPropagation();
     const menu = document.getElementById("densityMenu");
-    const trig = document.querySelector(".cs-trigger");
     const isOpen = menu?.classList.contains("open") ?? false;
-    if (menu) menu.classList.toggle("open", !isOpen);
-    if (trig) trig.setAttribute("aria-expanded", String(!isOpen));
-    const otherMenu = document.getElementById("utilMenu");
-    if (otherMenu) otherMenu.classList.remove("open");
-    const otherWrap = document.getElementById("utilMenuWrap");
-    if (otherWrap) otherWrap.classList.remove("open");
+    closeDensityMenu();
+    if (menu && !isOpen && csTrigger) {
+      menu.classList.add("open");
+      csTrigger.setAttribute("aria-expanded", "true");
+      portalFloat(menu, csTrigger);
+    }
+    document.getElementById("utilMenu")?.classList.remove("open");
+    document.getElementById("utilMenuWrap")?.classList.remove("open");
+  });
+
+  /* teclado no dropdown de densidade: setras navegam, Enter/Espaço ativam, Esc fecha */
+  const densityOpts = () => Array.from(document.querySelectorAll<HTMLElement>("#densityMenu .cs-option"));
+  csTrigger?.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      csTrigger.click();
+      requestAnimationFrame(() => densityOpts()[0]?.focus());
+    }
+  });
+  document.getElementById("densityMenu")?.addEventListener("keydown", (e) => {
+    const list = densityOpts();
+    const i = list.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      list[(i + 1 + list.length) % list.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      list[(i - 1 + list.length) % list.length]?.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      (document.activeElement as HTMLElement | null)?.click();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      closeDensityMenu();
+      csTrigger?.focus();
+    }
   });
 
   document.addEventListener("click", () => {
-    const menu = document.getElementById("densityMenu");
-    const trig = document.querySelector(".cs-trigger");
-    if (menu) menu.classList.remove("open");
-    if (trig) trig.setAttribute("aria-expanded", "false");
+    closeDensityMenu();
   });
 
   document.getElementById("helpClose")?.addEventListener("click", () => closeHelp());

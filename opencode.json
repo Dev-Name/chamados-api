@@ -1,0 +1,36 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/qwen3-ctx:latest",
+  "small_model": "ollama/qwen3-ctx:latest",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "qwen3-ctx:latest": {
+          "name": "Qwen 3 4B (local, agentico, 16k ctx)",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          },
+          "options": {
+            "temperature": 0.5
+          }
+        },
+        "llama3.1-ctx:latest": {
+          "name": "Llama 3.1 8B (local, 16k ctx)",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          },
+          "options": {
+            "temperature": 0.5
+          }
+        }
+      }
+    }
+  }
+}

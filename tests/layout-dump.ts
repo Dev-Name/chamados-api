@@ -28,7 +28,7 @@ async function main() {
       if (hdr) { const r = hdr.getBoundingClientRect(); if (r.right > vw + 2) issues.push("header-actions-over:" + r.right.toFixed(0)); }
       const sum = document.getElementById("summaryBar");
       if (sum && sum.scrollWidth > sum.clientWidth + 2) issues.push("summary-inner:" + sum.scrollWidth + ">" + sum.clientWidth);
-      const blkSel = ".grid-row.band .day:not(.idle) .blk, .dayband .day:not(.idle) .blk";
+      const blkSel = ".grid-row.band .day:not(.idle) .blk, .dayrow .day:not(.idle) .blk";
       document.querySelectorAll(blkSel).forEach((b) => {
         const dr = (b.closest(".day") as HTMLElement).getBoundingClientRect();
         const br = b.getBoundingClientRect();
@@ -81,14 +81,15 @@ async function main() {
   await sleep(150);
 
   out.uiToggles = await page.evaluate(() => ({
-    filtersHidden: !document.querySelector(".filters").classList.contains("show"),
-    legendHidden: !document.querySelector(".legend").classList.contains("show"),
+    filtersHidden: !document.querySelector("#filterBar").classList.contains("open"),
+    legendHidden: !document.querySelector("#legendPop").classList.contains("show"),
   }));
-  await page.click("#menuFilters");
+  await page.click("#filterToggle");
   await sleep(80);
   out.filtersToggle = await page.evaluate(() => ({
-    filtersNowShown: document.querySelector(".filters").classList.contains("show"),
+    nowClosedByToggle: !document.querySelector("#filterBar").classList.contains("open"),
   }));
+  await page.click("#filterToggle");
 
   // --- sidebar cabe no viewport ---
   out.sidebar = await page.evaluate(() => {
@@ -140,21 +141,23 @@ async function main() {
 
   // --- dia ---
   await page.click('#viewSwitch [data-view="day"]');
-  await page.waitForSelector(".dayband");
+  await page.waitForSelector(".dayrow");
   out.day = await page.evaluate(() => ({
-    days: document.querySelectorAll(".dayband .day").length,
-    hasIdleCell: !!document.querySelector(".dayband .day.idle"),
+    days: document.querySelectorAll(".dayrow").length,
+    hasTimeline: !!document.querySelector(".dayrow .day.tl"),
     title: document.getElementById("weekTitle")?.textContent,
   }));
   await page.screenshot({ path: "C:\\Users\\Jhonatan\\AppData\\Local\\Temp\\opencode\\cal-day.png" });
   await audit("day");
 
-  // --- zoom ---
-  const hBefore = await page.$eval(".dayband .day:not(.idle)", (el) => el.style.height || getComputedStyle(el).height);
-  await page.click("#zoomIn");
-  await page.click("#zoomIn");
-  const hAfter = await page.$eval(".dayband .day:not(.idle)", (el) => el.style.height || getComputedStyle(el).height);
-  out.zoom = { zoomLabel: await page.$eval("#zoomVal", (el) => el.textContent), hBefore, hAfter, grew: parseFloat(hAfter) > parseFloat(hBefore) };
+  // --- densidade: expandido aumenta o slot da régua do dia ---
+  const slotBefore = await page.$eval(".dayrow .day.tl", (el) => parseFloat(getComputedStyle(el).getPropertyValue("--tl-slot")));
+  await page.click("#densityWrap .cs-trigger");
+  await page.waitForSelector('#densityMenu .cs-option[data-value="expanded"]');
+  await page.click('#densityMenu .cs-option[data-value="expanded"]');
+  await new Promise((r) => setTimeout(r, 200));
+  const slotAfter = await page.$eval(".dayrow .day.tl", (el) => parseFloat(getComputedStyle(el).getPropertyValue("--tl-slot")));
+  out.density = { densLabel: await page.$eval("#densityLabel", (el) => el.textContent), slotBefore, slotAfter, grew: slotAfter > slotBefore };
 
   // --- teclado: D -> semana, M -> mês, seta direita muda período ---
   await page.keyboard.press("KeyW");

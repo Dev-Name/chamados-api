@@ -1,17 +1,14 @@
 import { Router } from "express";
 import { TicketStatus } from "@prisma/client";
 import { prisma } from "../lib/errors";
+import { parseId } from "../lib/http";
 import { recalculateAnalystQueue } from "../services/ticket.service";
 
 export const ticketsRouter = Router();
 
 export const TICKET_STATUSES = Object.values(TicketStatus);
 
-/** Converte param de rota para inteiro positivo ou retorna null. */
-function parseId(param: string): number | null {
-  const n = Number(param);
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
+const MAX_TITLE = 300;
 
 function normTicketInput(body: Record<string, unknown>): {
   error?: string;
@@ -32,6 +29,7 @@ function normTicketInput(body: Record<string, unknown>): {
   if (body.title !== undefined) {
     const title = typeof body.title === "string" ? body.title.trim() : "";
     if (!title) return { error: "title é obrigatório" };
+    if (title.length > MAX_TITLE) return { error: `title deve ter no máximo ${MAX_TITLE} caracteres` };
     data.title = title;
   }
   if (body.categoryId !== undefined) {
@@ -87,6 +85,27 @@ function normTicketInput(body: Record<string, unknown>): {
   return { data };
 }
 
+/** Verifica se as chaves estrangeiras informadas existem antes de persistir. */
+async function validateRefs(fields: {
+  categoryId?: number;
+  analystId?: number | null;
+  dependsOnTicketId?: number | null;
+}): Promise<string | null> {
+  if (fields.categoryId != null) {
+    const cat = await prisma.category.findUnique({ where: { id: fields.categoryId }, select: { id: true } });
+    if (!cat) return "categoryId não existe";
+  }
+  if (fields.analystId != null) {
+    const ana = await prisma.analyst.findUnique({ where: { id: fields.analystId }, select: { id: true } });
+    if (!ana) return "analystId não existe";
+  }
+  if (fields.dependsOnTicketId != null) {
+    const dep = await prisma.ticket.findUnique({ where: { id: fields.dependsOnTicketId }, select: { id: true } });
+    if (!dep) return "dependsOnTicketId não existe";
+  }
+  return null;
+}
+
 ticketsRouter.post("/", async (req, res, next) => {
   try {
     const parsed = normTicketInput(req.body);
@@ -105,6 +124,11 @@ ticketsRouter.post("/", async (req, res, next) => {
     const workedOnCreate = rest.workedMinutes ?? 0;
     if (workedOnCreate > estimatedMinutes) {
       res.status(400).json({ error: "workedMinutes não pode ser maior que estimatedMinutes" });
+      return;
+    }
+    const dependRefErr = await validateRefs({ categoryId, analystId: analystId ?? null, dependsOnTicketId: rest.dependsOnTicketId ?? null });
+    if (dependRefErr) {
+      res.status(400).json({ error: dependRefErr });
       return;
     }
 
@@ -158,6 +182,16 @@ ticketsRouter.patch("/:id", async (req, res, next) => {
     const effectiveWorked = parsed.data.workedMinutes ?? previous.workedMinutes;
     if (effectiveWorked > effectiveEstimated) {
       res.status(400).json({ error: "workedMinutes não pode ser maior que estimatedMinutes" });
+      return;
+    }
+
+    const refErr = await validateRefs({
+      categoryId: parsed.data.categoryId ?? previous.categoryId,
+      analystId: parsed.data.analystId !== undefined ? (parsed.data.analystId ?? null) : previous.analystId,
+      dependsOnTicketId: parsed.data.dependsOnTicketId !== undefined ? (parsed.data.dependsOnTicketId ?? null) : previous.dependsOnTicketId,
+    });
+    if (refErr) {
+      res.status(400).json({ error: refErr });
       return;
     }
 

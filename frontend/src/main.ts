@@ -1,24 +1,26 @@
 import "./styles/base.css";
 import "./styles/grid.css";
 import "./styles/views.css";
+import "./styles/responsive.css";
 
 import { store, emit, subscribe, savePrefs } from "./core/state";
 import type { ViewId } from "./core/state";
 import { api, loadCategories, loadAnalysts, setReloadHook } from "./core/api";
 import { DEFAULT_FILTERS, fillFilterSelects, visibleAnalysts } from "./core/filters";
 import { periodDays, periodLabel, go, setView } from "./core/nav";
-import { renderGrid, wireGridView, cancelDrag } from "./views/grid";
+import { renderGrid, wireGridView, cancelDrag, closeMonthPop } from "./views/grid";
 import { renderKanban, wireKanbanClick } from "./views/kanban";
 import { renderTable } from "./views/table";
 import { renderLoad } from "./views/load";
 import { renderGantt } from "./views/gantt";
-import { applyUiPrefs, wireChrome, showToast, closeAllModals, syncDensityUI, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
+import { applyUiPrefs, wireChrome, showToast, closeAllModals, closeFloats, syncDensityUI, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
+import { wireResponsive, updateFilterCount } from "./ui/responsive";
 import { wireTicketModal } from "./ui/modals-ticket";
 import { wireAnalystsModal } from "./ui/modals-analyst";
 import { wireQueueModal } from "./ui/modals-queue";
 import { wireReportModal } from "./ui/modals-report";
 import { wireSettingsModal } from "./ui/modals-settings";
-import { isOverdue, remainOf } from "./core/tickets";
+import { isOverdue, remainOf, clearUsedCache } from "./core/tickets";
 import { fmtNum, startOf } from "./core/format";
 
 const GRID_VIEWS = ["day", "week", "month", "year"];
@@ -68,6 +70,7 @@ function setActiveViewTabs(): void {
 }
 
 function paint(): void {
+  clearUsedCache();
   fillFilterSelects();
   applyUiPrefs();
   setActiveViewTabs();
@@ -78,6 +81,7 @@ function paint(): void {
       `<span>${periodLabel()}</span>`;
   }
   updateSummary();
+  updateFilterCount();
   const wrap = document.getElementById("calWrap")!;
   const container = document.getElementById("viewContainer")!;
   const isGrid = GRID_VIEWS.includes(store.view);
@@ -202,7 +206,8 @@ function keyboard(e: KeyboardEvent): void {
       return;
     }
     if (cancelDrag()) return;
-    document.querySelectorAll<HTMLElement>(".band-menu.show").forEach((m) => m.classList.remove("show"));
+    if (closeMonthPop()) return;
+    closeFloats();
     return;
   }
   const k = e.key.toLowerCase();
@@ -233,6 +238,7 @@ function startClock(): void {
 }
 
 function init(): void {
+  wireResponsive();
   wireChrome();
   wireTicketModal();
   wireAnalystsModal();

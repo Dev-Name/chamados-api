@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { CycleDependencyError, AnalystNotFoundError } from "./lib/errors";
 import { recalculateAllQueues } from "./services/ticket.service";
 import { analystsRouter } from "./routes/analysts";
@@ -10,16 +12,43 @@ import { categoriesRouter } from "./routes/categories";
 const app = express();
 
 // Headers de segurança básicos (sem dependência externa)
+function csp(nonce?: string): string {
+  const scriptSrc = nonce ? `'self' 'nonce-${nonce}'` : "'self'";
+  return [
+    `default-src 'self' blob:`,
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
 app.use((_req, res, next) => {
+  res.setHeader("Content-Security-Policy", csp());
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "0"); // desativado em favor do CSP
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
   next();
 });
 
 app.use(express.json({ limit: "6mb" }));
+
+// Página principal: injeta um nonce no script inline do bundle e libera via CSP
+// (o build-ui embute o JS dentro do HTML, então 'self' sozinho bloquearia).
+app.get("/", async (_req, res, next) => {
+  try {
+    const html = await readFile(path.join(__dirname, "..", "public", "index.html"), "utf8");
+    const nonce = randomBytes(16).toString("base64");
+    res.setHeader("Content-Security-Policy", csp(nonce));
+    res.type("html").send(html.replace("<script>", `<script nonce="${nonce}">`));
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.use(express.static(path.join(__dirname, "..", "public")));
 
