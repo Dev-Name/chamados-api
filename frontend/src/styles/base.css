@@ -31,8 +31,8 @@
   --d-bar: 16px;
   --d-mday: 150px;
   --d-tile: 9px;
-  --tl-slot: 56px;
-  --tl-gap: 10px;
+  --vtl-ruler-w: 46px;
+  --vtl-hour: 64px;
   --dt-min-h: 150px;
 }
 html[data-density="compact"] {
@@ -46,8 +46,7 @@ html[data-density="compact"] {
   --d-bar: 13px;
   --d-mday: 60px;
   --d-tile: 7px;
-  --tl-slot: 44px;
-  --tl-gap: 8px;
+  --vtl-hour: 48px;
   --dt-min-h: 132px;
 }
 html[data-density="expanded"] {
@@ -61,8 +60,7 @@ html[data-density="expanded"] {
   --d-bar: 22px;
   --d-mday: 220px;
   --d-tile: 12px;
-  --tl-slot: 72px;
-  --tl-gap: 12px;
+  --vtl-hour: 80px;
   --dt-min-h: 184px;
 }
 html[data-theme="dark"] {

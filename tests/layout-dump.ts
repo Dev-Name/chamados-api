@@ -28,7 +28,7 @@ async function main() {
       if (hdr) { const r = hdr.getBoundingClientRect(); if (r.right > vw + 2) issues.push("header-actions-over:" + r.right.toFixed(0)); }
       const sum = document.getElementById("summaryBar");
       if (sum && sum.scrollWidth > sum.clientWidth + 2) issues.push("summary-inner:" + sum.scrollWidth + ">" + sum.clientWidth);
-      const blkSel = ".grid-row.band .day:not(.idle) .blk, .dayrow .day:not(.idle) .blk";
+      const blkSel = ".grid-row.band .day:not(.idle) .blk, .daybody .day:not(.idle) .blk";
       document.querySelectorAll(blkSel).forEach((b) => {
         const dr = (b.closest(".day") as HTMLElement).getBoundingClientRect();
         const br = b.getBoundingClientRect();
@@ -141,22 +141,23 @@ async function main() {
 
   // --- dia ---
   await page.click('#viewSwitch [data-view="day"]');
-  await page.waitForSelector(".dayrow");
+  await page.waitForSelector(".daybody");
   out.day = await page.evaluate(() => ({
-    days: document.querySelectorAll(".dayrow").length,
-    hasTimeline: !!document.querySelector(".dayrow .day.tl"),
+    lanes: document.querySelectorAll(".daybody .day.vtl").length,
+    hasRuler: !!document.querySelector(".daybody .vtl-ruler"),
+    hasTimeline: !!document.querySelector(".daybody .day.vtl"),
     title: document.getElementById("weekTitle")?.textContent,
   }));
   await page.screenshot({ path: "C:\\Users\\Jhonatan\\AppData\\Local\\Temp\\opencode\\cal-day.png" });
   await audit("day");
 
-  // --- densidade: expandido aumenta o slot da régua do dia ---
-  const slotBefore = await page.$eval(".dayrow .day.tl", (el) => parseFloat(getComputedStyle(el).getPropertyValue("--tl-slot")));
+  // --- densidade: expandido aumenta a altura por hora da régua do dia ---
+  const slotBefore = await page.$eval(".daybody .day.vtl", (el) => parseFloat(getComputedStyle(el).getPropertyValue("--vtl-hour")));
   await page.click("#densityWrap .cs-trigger");
   await page.waitForSelector('#densityMenu .cs-option[data-value="expanded"]');
   await page.click('#densityMenu .cs-option[data-value="expanded"]');
   await new Promise((r) => setTimeout(r, 200));
-  const slotAfter = await page.$eval(".dayrow .day.tl", (el) => parseFloat(getComputedStyle(el).getPropertyValue("--tl-slot")));
+  const slotAfter = await page.$eval(".daybody .day.vtl", (el) => parseFloat(getComputedStyle(el).getPropertyValue("--vtl-hour")));
   out.density = { densLabel: await page.$eval("#densityLabel", (el) => el.textContent), slotBefore, slotAfter, grew: slotAfter > slotBefore };
 
   // --- teclado: D -> semana, M -> mês, seta direita muda período ---

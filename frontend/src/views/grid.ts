@@ -69,25 +69,24 @@ function dtHtml(r: TlRange, lunch: { start: number; end: number } | null, isToda
   return `<div class="dt">${s}</div>`;
 }
 
-/* dia: régua horizontal (rótulos de hora) por analista. */
-function tlRuler(r: TlRange, lunch: { start: number; end: number } | null): string {
+/* dia: régua vertical única de horas (rótulos descendo à esquerda). */
+function vtlRulerHtml(r: TlRange): string {
   const span = r.end - r.start;
-  const pos = (m: number) => (((m - r.start) / span) * 100).toFixed(2);
-  let s = hoursInRange(r).map((h) => `<span class="tl-h" style="left:${pos(h * 60)}%">${h}:00</span>`).join("");
-  if (lunch) s += `<span class="tl-h tl-lunch-lbl" style="left:${pos(lunch.start)}%">almoço</span>`;
-  return s;
+  const pos = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
+  return hoursInRange(r).map((h) => `<span class="vtl-h" style="top:${pos(h * 60)}%">${h}:00</span>`).join("");
 }
 
-function tlLines(r: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
+/* dia: decoração da faixa vertical — linhas de hora, faixa de almoço e "agora". */
+function vtlDecorHtml(r: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
   const span = r.end - r.start;
   const p = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
   let s = "";
-  for (const h of hoursInRange(r)) s += `<i class="tl-line" style="left:${p(h * 60)}%"></i>`;
-  if (lunch) s += `<i class="tl-lunch" style="left:${p(lunch.start)}%;width:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
+  for (const h of hoursInRange(r)) s += `<i class="vtl-line" style="top:${p(h * 60)}%"></i>`;
+  if (lunch) s += `<i class="vtl-lunch" style="top:${p(lunch.start)}%;height:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
   if (isToday) {
     const n = new Date();
     const nowMin = n.getHours() * 60 + n.getMinutes();
-    if (nowMin >= r.start && nowMin <= r.end) s += `<i class="tl-now" style="left:${p(nowMin)}%"></i>`;
+    if (nowMin >= r.start && nowMin <= r.end) s += `<i class="vtl-now" style="top:${p(nowMin)}%"></i>`;
   }
   return s;
 }
@@ -283,13 +282,14 @@ function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): voi
   cell.appendChild(buildBlk(cell, t, from, to));
 }
 
-/* dia (timeline horizontal): posiciona por horário, faixas verticais quando há sobreposição. */
-function placeBlockRow(cell: HTMLElement, t: Ticket, from: number, to: number, x: number, w: number, topPx: number, slotPx: number): void {
+/* dia (régua vertical): cartão posicionado por horário; colunas quando sobrepõem. */
+function placeBlockV(cell: HTMLElement, t: Ticket, from: number, to: number, topPct: number, heightPct: number, col: number, cols: number): void {
   const blk = buildBlk(cell, t, from, to);
-  blk.style.left = x + "%";
-  blk.style.width = w + "%";
-  blk.style.top = topPx + "px";
-  blk.style.height = slotPx + "px";
+  blk.classList.add("vblk");
+  blk.style.top = topPct + "%";
+  blk.style.height = heightPct + "%";
+  blk.style.left = (col / cols) * 100 + "%";
+  blk.style.width = 100 / cols + "%";
   cell.appendChild(blk);
 }
 
@@ -366,28 +366,32 @@ function renderDayWeek(isDay: boolean): void {
   if (isDay) {
     const d = days[0];
     const isToday = sameDay(d, now);
+    const ranges = ais
+      .map((a) => workRange(a, d.getDay()))
+      .filter((x): x is TlRange => !!x);
+    const dayr: TlRange = {
+      start: ranges.length ? Math.min(...ranges.map((x) => x.start)) : 0,
+      end: ranges.length ? Math.max(...ranges.map((x) => x.end)) : 0,
+    };
+    rows += `<div class="grid-row band daybody" style="grid-template-columns:${template}">
+      <div class="band-label daylabels" style="--vtl-n:${ais.length}">`;
     for (const a of ais) {
       const r = workRange(a, d.getDay());
-      const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
-      if (!r) {
-        rows += `<div class="grid-row band dayrow" data-a="${a.id}" style="grid-template-columns:${template}">
-          ${bandLabelHtml(a, null)}
-          <div class="daytl"><div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}"><span class="idle-label">fora do expediente</span></div></div>
-        </div>`;
-        continue;
-      }
       const avail = prodCapOfDow(a, d.getDay());
       const used = usedMinInDay(a, d);
-      rows += `<div class="grid-row band dayrow" data-a="${a.id}" style="grid-template-columns:${template}">
-        ${bandLabelHtml(a, { activeCount, pct: avail > 0 ? Math.round((used / avail) * 100) : 0, dayTotal: used, avail })}
-        <div class="daytl">
-          <div class="tl-ruler">${tlRuler(r, lunchForDow(a, d.getDay()))}</div>
-          <div class="day tl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${r.start}" data-e="${r.end}">
-            ${tlLines(r, lunchForDow(a, d.getDay()), isToday)}
-          </div>
-        </div>
-      </div>`;
+      const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
+      rows += bandLabelHtml(a, r && avail > 0 ? { activeCount, pct: Math.round((used / avail) * 100), dayTotal: used, avail } : null);
     }
+    rows += `</div><div class="daytl"><div class="vtl-ruler">${vtlRulerHtml(dayr)}</div><div class="vtl-lanes" style="--lanes:${ais.length}">`;
+    for (const a of ais) {
+      const r = workRange(a, d.getDay());
+      if (!r) {
+        rows += `<div class="day vtl idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">fora do expediente</span></div>`;
+        continue;
+      }
+      rows += `<div class="day vtl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${dayr.start}" data-e="${dayr.end}" title="Clique para criar um chamado neste dia">${vtlDecorHtml(r, lunchForDow(a, d.getDay()), isToday)}</div>`;
+    }
+    rows += `</div></div></div>`;
   } else {
     for (const a of ais) {
       const workDays = days.filter((d) => capFor(a, d) > 0);
@@ -409,9 +413,22 @@ function renderDayWeek(isDay: boolean): void {
 
   calBody.innerHTML = head + rows;
 
+  const dayRanges = isDay
+    ? (() => {
+        const d = days[0];
+        const ranges = ais
+          .map((a) => workRange(a, d.getDay()))
+          .filter((x): x is TlRange => !!x);
+        return {
+          start: ranges.length ? Math.min(...ranges.map((x) => x.start)) : 0,
+          end: ranges.length ? Math.max(...ranges.map((x) => x.end)) : 0,
+        };
+      })()
+    : null;
+
   for (const a of ais) {
     const band = isDay
-      ? calBody.querySelector<HTMLElement>(`.dayrow[data-a="${a.id}"]`)
+      ? calBody.querySelector<HTMLElement>(".daybody")
       : document.getElementById("band-" + a.id);
     if (!band) continue;
     for (const d of days) {
@@ -422,21 +439,18 @@ function renderDayWeek(isDay: boolean): void {
       if (!r) continue;
       const items = tlItems(a, d, r);
       if (isDay) {
-        const css = getComputedStyle(document.documentElement);
-        const slot = parseInt(css.getPropertyValue("--tl-slot"), 10) || 56;
-        const gap = parseInt(css.getPropertyValue("--tl-gap"), 10) || 10;
+        const span = dayRanges!.end - dayRanges!.start;
         const tracks = tlTracks(items);
-        const span = r.end - r.start;
-        let h = 0;
+        const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const x = ((it.from - r.start) / span) * 100;
-          const w = Math.max(((it.to - it.from) / span) * 100, 8);
-          const topPx = tracks[i] * (slot + gap);
-          h = Math.max(h, topPx + slot);
-          placeBlockRow(cell, it.t, it.from, it.to, x, w, topPx, slot);
+          const top = ((it.from - dayRanges!.start) / span) * 100;
+          const h = Math.max(((it.to - it.from) / span) * 100, 1.5);
+          placeBlockV(cell, it.t, it.from, it.to, top, h, tracks[i], cols);
         }
-        cell.style.height = Math.max(h + 8, 64) + "px";
+        const hourPx = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--vtl-hour"), 10) || 64;
+        const lanesBox = band.querySelector<HTMLElement>(".vtl-lanes");
+        if (lanesBox) lanesBox.style.height = Math.max((span / 60) * hourPx, 200) + "px";
       } else {
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
@@ -558,7 +572,7 @@ function dragEndSafe(): void {
   drag.id = null;
 }
 
-/* converte a posição do cursor (x no dia, y na semana) em minutos dentro do expediente. */
+/* converte a posição do cursor (vertical, eixo Y) em minutos dentro do expediente. */
 function cursorTl(cell: HTMLElement, e: PointerEvent): number | null {
   const s = cell.dataset.s;
   const eN = cell.dataset.e;
@@ -567,12 +581,7 @@ function cursorTl(cell: HTMLElement, e: PointerEvent): number | null {
   const end = parseInt(eN, 10);
   if (!(end > start)) return null;
   const r = cell.getBoundingClientRect();
-  let f: number;
-  if (cell.classList.contains("tl")) {
-    f = (e.clientX - r.left) / Math.max(r.width, 1);
-  } else {
-    f = (e.clientY - r.top) / Math.max(r.height, 1);
-  }
+  const f = (e.clientY - r.top) / Math.max(r.height, 1);
   return Math.min(Math.max(start + Math.round((end - start) * f), start), end - 1);
 }
 

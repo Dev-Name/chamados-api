@@ -62,62 +62,77 @@
 .dhead.dhead-date { justify-content: center; align-items: center; }
 .dhead.dhead-date .dd { gap: 8px; }
 
-/* linha do dia = rail + timeline horizontal */
-.band.dayrow { grid-template-columns: var(--rail) 1fr; }
-.daytl { position: relative; display: flex; flex-direction: column; min-width: 0; }
+/* corpo do dia = rail (labels dos analistas) + timeline vertical única */
+.band.daybody { grid-template-columns: var(--rail) 1fr; }
+.daytl { position: relative; min-width: 0; padding-left: var(--vtl-ruler-w); }
 
-/* régua horizontal (rótulos de hora) no topo do dia */
-.tl-ruler {
-  position: relative; height: 22px; flex: none; overflow: hidden;
-  border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 94%, var(--hover));
+/* régua vertical única de horas (à esquerda, atravessa todas as faixas) */
+.vtl-ruler {
+  position: absolute; left: 0; top: 0; bottom: 0; width: var(--vtl-ruler-w);
+  border-right: 1px solid var(--border); z-index: 5; overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 88%, var(--hover));
 }
-.tl-ruler .tl-h {
-  position: absolute; top: 3px; transform: translateX(-50%);
-  font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: .2px; white-space: nowrap;
+.vtl-ruler .vtl-h {
+  position: absolute; right: 7px; transform: translateY(-50%);
+  font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .2px; white-space: nowrap;
 }
-.tl-ruler .tl-h.tl-lunch-lbl { transform: translateX(6px); color: color-mix(in srgb, var(--primary) 72%, var(--muted)); font-weight: 800; font-size: 10px; }
 
-/* corpo do dia: células de fluxo por analista */
-.day.tl {
-  position: relative; flex: 1; min-height: 64px; overflow: hidden;
-  padding: 0; gap: 0; border: none;
-  border-left: 1px solid var(--border);
+/* faixas por analista: uma linha da grade = um analista (alturas iguais) */
+.vtl-lanes { display: grid; grid-template-rows: repeat(var(--lanes), 1fr); min-width: 0; }
+
+.band-label.daylabels {
+  display: grid; grid-template-rows: repeat(var(--vtl-n), 1fr);
+  padding: 0; gap: 0;
+}
+.band.daybody .daylabels > .band-label { position: static; border-right: 0; border-bottom: 1px solid var(--border); }
+
+/* célula de fluxo vertical (expediente de cima para baixo) */
+.day.vtl {
+  position: relative; display: block; padding: 0; gap: 0; min-height: 56px; overflow: hidden;
+  border: 1px solid var(--border); border-left: none; border-bottom: none;
   background: repeating-linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--panel) 98%, var(--border)) 0,
-    color-mix(in srgb, var(--panel) 98%, var(--border)) calc(var(--tl-slot) / 2),
-    transparent calc(var(--tl-slot) / 2),
-    transparent var(--tl-slot)
+    color-mix(in srgb, var(--panel) 96%, var(--border)) 0,
+    color-mix(in srgb, var(--panel) 96%, var(--border)) calc(var(--vtl-hour) - 1px),
+    transparent calc(var(--vtl-hour) - 1px),
+    transparent var(--vtl-hour)
   );
 }
-.day.tl.todayCell { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--primary) 4%, transparent); }
-
-/* linhas de hora, faixa de almoço e "agora" no dia */
-.day.tl .tl-line { position: absolute; top: 0; bottom: 0; width: 0; pointer-events: none; border-left: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
-.day.tl .tl-lunch {
-  position: absolute; top: 0; bottom: 0; pointer-events: none;
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border-left: 1px dashed color-mix(in srgb, var(--primary) 35%, transparent);
+.day.vtl + .day.vtl { border-top: 1px solid var(--border); }
+.day.vtl.todayCell { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--primary) 4%, transparent); }
+.day.vtl.idle {
+  display: flex; align-items: center; justify-content: center;
+  background: repeating-linear-gradient(45deg, var(--out-bg) 0 5px, var(--track) 5px 10px);
+  color: var(--muted); font-size: var(--fs-sm); font-weight: 700; border: none;
 }
-.day.tl .tl-now {
-  position: absolute; top: 0; bottom: 0; width: 2px; pointer-events: none;
+.day.vtl.idle .idle-label { background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 2px 8px; border-radius: 20px; }
+
+/* linhas de hora, faixa de almoço e "agora" no dia (horizontais, posições em %) */
+.day.vtl .vtl-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
+.day.vtl .vtl-lunch {
+  position: absolute; left: 0; right: 0; pointer-events: none;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-top: 1px dashed color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.day.vtl .vtl-now {
+  position: absolute; left: 0; right: 0; height: 2px; pointer-events: none;
   background: #0ea5e9; box-shadow: 0 0 0 1px rgba(14, 165, 233, .35);
 }
-.day.tl .tl-now::after {
-  content: ""; position: absolute; left: -4px; top: 0; width: 9px; height: 9px;
-  border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #0ea5e9;
+.day.vtl .vtl-now::before {
+  content: ""; position: absolute; left: -4px; top: -4px; width: 9px; height: 9px;
+  border-radius: 50%; background: #0ea5e9;
 }
 
-/* blocos do dia: posicionados por horário (faixas verticais em sobreposição) */
-.day.tl .blk {
+/* blocos do dia: cartões posicionados por horário (colunas quando sobrepõem) */
+.day.vtl .blk {
   position: absolute; margin: 0; min-width: 0; overflow: hidden;
-  display: flex; flex-direction: row; align-items: center; gap: 5px;
-  padding: 0 6px; font-size: var(--d-small);
+  display: flex; flex-direction: column; gap: 2px; padding: 3px 6px;
 }
-.day.tl .blk .bt-title { flex: 1 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.day.tl .blk .bt-pill, .day.tl .blk .bt-dur, .day.tl .blk .bt-extra { display: none; }
-.day.tl .blk .st-badge { margin-left: auto; flex: none; }
+.day.vtl .blk.vblk { border-radius: 8px; }
+.day.vtl .blk .bt-top { gap: 4px; }
+.day.vtl .blk .bt-title { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day.vtl .blk .bt-meta { flex: none; }
+.day.vtl .blk .bt-pill, .day.vtl .blk .bt-dur, .day.vtl .blk .bt-extra, .day.vtl .blk .st-badge { display: none; }
 
 /* Semana: célula com mini-eixo vertical (expediente de cima para baixo) */
 .day.dtcell {
