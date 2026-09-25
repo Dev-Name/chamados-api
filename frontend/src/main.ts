@@ -10,12 +10,12 @@ import { DEFAULT_FILTERS, fillFilterSelects, visibleAnalysts } from "./core/filt
 import { periodDays, periodLabel, go, setView } from "./core/nav";
 import { renderGrid, wireGridView, cancelDrag, closeMonthPop } from "./views/grid";
 import { renderKanban, wireKanbanClick } from "./views/kanban";
-import { renderTable } from "./views/table";
 import { renderLoad } from "./views/load";
 import { renderGantt } from "./views/gantt";
-import { applyUiPrefs, wireChrome, showToast, closeAllModals, closeFloats, syncDensityUI, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
+import { applyUiPrefs, wireChrome, showToast, closeAllModals, closeFloats, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
 import { wireResponsive, updateFilterCount } from "./ui/responsive";
 import { wireTicketModal } from "./ui/modals-ticket";
+import { wireTicketsModal } from "./ui/modals-tickets";
 import { wireAnalystsModal } from "./ui/modals-analyst";
 import { wireQueueModal } from "./ui/modals-queue";
 import { wireReportModal } from "./ui/modals-report";
@@ -91,8 +91,6 @@ function paint(): void {
     renderGrid();
   } else if (store.view === "kanban") {
     renderKanban();
-  } else if (store.view === "table") {
-    renderTable();
   } else if (store.view === "load") {
     renderLoad();
   } else if (store.view === "gantt") {
@@ -220,7 +218,6 @@ function keyboard(e: KeyboardEvent): void {
   else if (k === "m") setView("month");
   else if (k === "a" || k === "y") setView("year");
   else if (k === "k") setView("kanban");
-  else if (k === "t") setView("table");
   else if (k === "c") setView("load");
   else if (k === "?") toggleHelp();
   else if (e.key === "ArrowLeft") go(-1);
@@ -241,6 +238,7 @@ function init(): void {
   wireResponsive();
   wireChrome();
   wireTicketModal();
+  wireTicketsModal();
   wireAnalystsModal();
   wireQueueModal();
   wireReportModal();

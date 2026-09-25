@@ -43,7 +43,9 @@ async function main() {
   await new Promise((r) => setTimeout(r, 400));
   const modalOpen = await page.evaluate(() =>
     document.getElementById("ticketModal").classList.contains("open"));
-  const analystPreset = await page.evaluate(() => document.getElementById("t-analyst").value);
+  const analystPreset = await page.evaluate(
+    () => document.querySelector<HTMLInputElement>("#t-assignees input:checked")?.value ?? ""
+  );
   console.log("click-create:", modalOpen ? "modal aberto" : "FALHOU", "| analista preset:", analystPreset);
   await page.evaluate(() => (document.querySelector('[data-close="ticketModal"]') as HTMLElement).click());
   await new Promise((r) => setTimeout(r, 300));

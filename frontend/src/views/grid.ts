@@ -180,7 +180,7 @@ function showBlkPop(p: BlkPopData, anchor: HTMLElement): void {
   el.className = "blk-pop";
   el.innerHTML =
     `<div class="blk-pop-title"><b>#${p.id}</b> ${esc(p.title)}</div>` +
-    `<div class="blk-pop-row">${esc(p.cat)} • ${esc(p.status)}${p.late ? ' <span class="blk-pop-late">ATRASADO</span>' : ""}</div>` +
+    `<div class="blk-pop-row">${esc(p.cat)} • ${esc(p.status)}${p.late ? ' <span class="blk-pop-late">Atrasado</span>' : ""}</div>` +
     `<div class="blk-pop-row">${fmtNum(p.est)} min total${p.worked > 0 ? ` • ${fmtNum(p.worked)} min trabalhados (${p.pct}%)` : ""}</div>` +
     `<div class="blk-pop-row">${esc(p.start)} → ${esc(p.due)}</div>` +
     (p.dep ? `<div class="blk-pop-row blk-pop-dep">Depende do chamado #${esc(p.dep)}</div>` : "");
@@ -219,7 +219,7 @@ function buildBlk(cell: HTMLElement, t: Ticket, from: number, to: number): HTMLE
   const owner = store.analysts.find((x) => x.id === Number(cell.dataset.a));
   const ownerName = owner ? getCleanName(owner.name) : "";
   const tooltip =
-    `#${t.id} ${t.title}\n${catName} • ${statusLabel[t.status] || t.status}${late ? " • ATRASADO" : ""}\n` +
+    `#${t.id} ${t.title}\n${catName} • ${statusLabel[t.status] || t.status}${late ? " • Atrasado" : ""}\n` +
     `${fmtNum(t.estimatedMinutes)} total${worked > 0 ? ` • ${fmtNum(worked)} trabalhado (${pct}%)` : ""}\n` +
     `${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}${dep ? `\ndepende do chamado #${dep}` : ""}`;
   const blk = document.createElement("div");
@@ -242,7 +242,7 @@ function buildBlk(cell: HTMLElement, t: Ticket, from: number, to: number): HTMLE
   const extra =
     density === "expanded"
       ? `<div class="bt-extra">` +
-        (late ? '<span class="bt-badge bt-late-badge">ATRASADO</span>' : "") +
+        (late ? '<span class="bt-badge bt-late-badge">Atrasado</span>' : "") +
         (dep ? `<span class="bt-badge bt-dep-badge">depende do chamado #${esc(dep)}</span>` : "") +
         `<span class="bt-badge bt-cat-badge">${esc(catDisplay)}</span>` +
         (ownerName ? `<span class="bt-badge bt-owner-badge">${esc(ownerName)}</span>` : "") +
@@ -333,7 +333,7 @@ function renderDayWeek(isDay: boolean): void {
   const now = new Date();
 
   let head = `<div class="grid-row grid-head${isDay ? " grid-head-day" : ""}" style="grid-template-columns:${template}">
-              <div class="lbl">ANALISTAS</div>`;
+              <div class="lbl">Analistas</div>`;
   if (isDay) {
     const d = days[0];
     const isToday = sameDay(d, now);
@@ -710,7 +710,6 @@ interface MonthChip {
   pri: number;
   analyst: Analyst;
   hoursMin: number;
-  status: string;
 }
 
 function monthChipHtml(ch: MonthChip, density: Density): string {
@@ -803,7 +802,6 @@ function renderMonth(): void {
             pri: t.priority,
             analyst: a,
             hoursMin: mins,
-            status: t.status,
           });
         }
       }

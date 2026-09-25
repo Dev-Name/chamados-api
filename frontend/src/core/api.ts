@@ -22,13 +22,17 @@ export async function api<T = unknown>(url: string, method = "GET", body?: unkno
   setConn(true);
   if (!res.ok) {
     let msg = "Erro " + res.status;
+    let data: { error?: string } | undefined;
     try {
-      const data = (await res.json()) as { error?: string };
+      data = (await res.json()) as { error?: string };
       if (data.error) msg = data.error;
     } catch {
       /* ignore */
     }
-    throw new Error(msg);
+    const err = new Error(msg) as Error & { status?: number; body?: unknown };
+    err.status = res.status;
+    err.body = data;
+    throw err;
   }
   return res.status === 204 ? (null as T) : (res.json() as Promise<T>);
 }

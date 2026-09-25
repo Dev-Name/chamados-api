@@ -1,4 +1,4 @@
-/* ============ visões novas: Kanban, Tabela, Carga, Gantt ============ */
+/* ============ visões: Kanban, Carga, Gantt ============ */
 
 .view-container {
   padding: 2px 4px 16px;
@@ -97,53 +97,6 @@ html[data-theme="dark"] {
 }
 .kb-card .bt-pill { flex: none; }
 
-/* ---------- Tabela ---------- */
-.tb-toolbar {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 2px 0 10px;
-  padding: 8px 12px; background: var(--panel); border: 1px solid var(--border);
-  border-radius: var(--rad); font-size: 12.5px;
-}
-.tb-count { color: var(--muted); font-variant-numeric: tabular-nums; }
-.tb-toolbar select,
-.ld-toolbar select {
-  border: 1px solid var(--border); border-radius: var(--ui-r); height: var(--ui-h);
-  background: var(--panel); color: var(--text); font: inherit; font-size: 12.5px;
-  padding: 0 8px; box-sizing: border-box; box-shadow: var(--ui-shadow);
-}
-.tb-bulk { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.tb-sel { font-weight: 700; }
-.tb-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
-.tb {
-  width: 100%; border-collapse: collapse; font-size: var(--d-font); min-width: 980px;
-}
-.tb thead th {
-  text-align: left; padding: var(--d-pad-cell); background: var(--hover);
-  border-bottom: 1px solid var(--border); font-size: 10.5px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .35px; color: var(--muted);
-  white-space: nowrap; cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 2;
-}
-.tb thead th:hover { color: var(--text); }
-.tb .tb-check { width: 34px; text-align: center; }
-.tb td { padding: var(--d-pad-cell); border-bottom: 1px solid var(--border); vertical-align: middle; }
-.tb tbody tr:last-child td { border-bottom: none; }
-.tb tbody tr:hover td { background: var(--hover-strong); }
-.tb tbody tr:hover td:first-child { border-radius: 0; }
-.tb .tb-check input { accent-color: var(--primary); }
-.tb .tb-id { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tb .tb-title { font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tb .tb-analyst { white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-.tb .tb-analyst .avatar { margin-right: 5px; vertical-align: middle; }
-.tb .tb-empty { text-align: center; color: var(--muted); padding: 22px 10px; }
-.tb .tb-edit { width: 40px; text-align: center; }
-.tb .tb-blank { width: 2px; background: transparent; }
-.tb select.tb-inline {
-  border: 1px solid var(--primary); background: var(--panel); padding: 2px 6px;
-  border-radius: 6px; font: inherit; color: inherit; max-width: 160px;
-}
-.tb .st-badge { display: inline-block; }
-.tb .bt-pill { display: inline-block; font-size: 10px; }
-.muted { color: var(--muted); }
-
 /* ---------- Carga de trabalho ---------- */
 .ld-toolbar { padding: 4px 2px 10px; }
 .ld-hint { font-size: 11.5px; color: var(--muted); }
@@ -165,7 +118,6 @@ html[data-theme="dark"] {
 .ld .ld-c:hover { outline: 2px solid var(--primary); outline-offset: -2px; }
 .ld .ld-off { background: repeating-linear-gradient(45deg, var(--out-bg) 0 4px, var(--track) 4px 8px); }
 .ld .ld-sum { font-weight: 800; white-space: nowrap; }
-.ld .ld-tot { }
 .ld .ld-tot td { font-weight: 800; }
 .ld .ld-tot .ld-a { font-weight: 700; }
 
@@ -244,7 +196,6 @@ html[data-density="compact"] .g-toolbar { padding-bottom: 6px; }
 
 /* expandido: títulos completos (sem truncar) */
 html[data-density="expanded"] .kb-title { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
-html[data-density="expanded"] .tb .tb-title { white-space: normal; max-width: 460px; overflow-wrap: anywhere; }
 html[data-density="expanded"] .kb-card-meta { margin-top: 8px; }
 html[data-density="expanded"] .kb-card .bt-pill, 
 html[data-density="expanded"] .st-badge { font-size: 10.5px; }

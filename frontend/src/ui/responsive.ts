@@ -10,10 +10,6 @@ function mq(query: string): MediaQueryList {
 const mqMobile = mq("(max-width: 767.5px)");
 const mqBelowLg = mq("(max-width: 1023.5px)");
 
-export function isMobileView(): boolean {
-  return mqMobile.matches;
-}
-
 /* ---------------- menu lateral (drawer) ---------------- */
 
 let drawerOpen = false;

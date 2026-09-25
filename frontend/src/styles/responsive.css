@@ -213,8 +213,8 @@
   .kb-lane .kb-col { flex: 0 0 min(84vw, 300px); min-width: 0; scroll-snap-align: center; }
 }
 
-/* Tabela / Carga / Gantt: rolagem horizontal suave (estruturas já envolvidas) */
-.tb-scroll, .ld-scroll, .g-scroll { -webkit-overflow-scrolling: touch; }
+/* Carga / Gantt: rolagem horizontal suave (estruturas já envolvidas) */
+.ld-scroll, .g-scroll { -webkit-overflow-scrolling: touch; }
 
 /* Ano: menos colunas para não comprimir os heatmaps */
 @media (max-width: 1023.5px) {
@@ -234,7 +234,10 @@
 
   #filterToggle, #menuSummary, .util-btn, .cs-trigger,
   .nav-ctrl button, .tb-filters select, .tb-filters #f-q, .tb-filters #f-clear,
-  .seg button, .g-scale-btn, .util-menu button, .btn.subtle, .tb-toolbar select { min-height: 44px; }
+  #ticketsModal .t-filterbar select, #ticketsModal .t-filterbar input[type="search"],
+  #ticketsModal .t-filterbar .ghost.sm,
+  .seg button, .g-scale-btn, .util-menu button, .btn.subtle, .tb-toolbar select,
+  .a-tab-btn { min-height: 44px; }
   .nav-ctrl { height: auto; padding: 2px; }
 
   .side-nav .m-item { min-height: 48px; padding: 12px 11px; }
@@ -249,4 +252,5 @@
   .modal-body { max-height: 70vh; }
   .row2 { grid-template-columns: 1fr; }
   #analystsModal .modal { max-width: 100%; }
+  .a-desl-date { padding-left: 0; }
 }

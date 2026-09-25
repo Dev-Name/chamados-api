@@ -142,7 +142,7 @@ export function renderGantt(): void {
       barPos.set(b.t.id, { x: b.x, y: top + b.y + bh / 2, w: b.w });
       const barCls = "gbar" + (late ? " late" : "") + (b.clipped ? " clipped" : "");
       html += `<div class="${barCls}" data-id="${b.t.id}" style="left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${bh}px;--c:${color};--stc:${stc}"
-          title="#${b.t.id} ${esc(b.t.title)}\n${b.t.category.name} • ${fmtNum(b.t.estimatedMinutes)}${late ? " • ATRASADO" : ""}\n${fmtTime(b.t.startDate)} → ${fmtTime(b.t.dueDate)}${b.clipped ? "\n(barra cortada pelo período visível)" : ""}">
+          title="#${b.t.id} ${esc(b.t.title)}\n${b.t.category.name} • ${fmtNum(b.t.estimatedMinutes)}${late ? " • Atrasado" : ""}\n${fmtTime(b.t.startDate)} → ${fmtTime(b.t.dueDate)}${b.clipped ? "\n(barra cortada pelo período visível)" : ""}">
           <span class="gbar-label">#${b.t.id} ${esc(b.t.title)}</span>
         </div>`;
     }

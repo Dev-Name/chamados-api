@@ -23,10 +23,6 @@ export function closeAllModals(): void {
   document.querySelectorAll(".modal-backdrop.open").forEach((m) => m.classList.remove("open"));
 }
 
-export function anyModalOpen(): boolean {
-  return !!document.querySelector(".modal-backdrop.open");
-}
-
 /* ---------- camadas flutuantes portalizadas no <body> (root da aplicação)
    Posicionamento fixo na viewport com flip vertical/horizontal: nunca cortado
    por containers com rolagem (#calWrap) nem pelas bordas da janela. ---------- */

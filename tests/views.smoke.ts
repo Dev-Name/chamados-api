@@ -101,54 +101,51 @@ async function main() {
     check("kanban com raias por analista", swimOk, doc.querySelectorAll(".kb-lane").length + " raias");
   }
 
-  // ---- Tabela ----
-  switchView("table");
-  const tbOk = await waitFor(() => doc.querySelectorAll(".tb tbody tr").length > 0);
-  check("tabela renderiza linhas", tbOk, doc.querySelectorAll(".tb tbody tr").length + " linhas");
-  check("tabela tem cabeçalho ordenável", doc.querySelectorAll(".tb thead th.tb-sort").length >= 5);
-  check("tabela tem exportar CSV", !!doc.getElementById("tbCsv"));
-  check("tabela tem checkbox de seleção", doc.querySelectorAll(".tb .tb-selbox").length > 0);
-  const sortClick = doc.querySelector<HTMLElement>(".tb-sort[data-sort=title]");
-  sortClick?.click();
-  await sleep(100);
-  const titleSort = doc.querySelector<HTMLElement>(".tb-sort[data-sort=title]");
-  check("clique em coluna ordena", !!(titleSort && titleSort.textContent?.includes("▲")));
+  // ---- Chamados (listagem igual à tela de Analistas) ----
+  const ticketsMenu = doc.getElementById("ticketsMenu");
+  if (ticketsMenu) {
+    ticketsMenu.click();
+    const lOpen = await waitFor(() => doc.getElementById("ticketsModal").classList.contains("open"));
+    check("menu Chamados abre a listagem", lOpen);
+    const cards = doc.querySelectorAll("#ticketsList .ticket-card");
+    check("listagem renderiza chamados como cartões", cards.length > 0, cards.length + " chamados");
+    check("cada chamado tem ação editar", doc.querySelectorAll("#ticketsList [data-t-edit]").length > 0);
+    check("cada chamado tem ação excluir", doc.querySelectorAll("#ticketsList [data-t-del]").length > 0);
+    check("cada chamado mostra prazo previsto", doc.querySelectorAll("#ticketsList .t-card-meta").length > 0);
 
-  // dblclick na coluna de status abre o select correto (mapeamento de colunas)
-  const anyRow = doc.querySelector<HTMLElement>(".tb tbody tr[data-id]");
-  const statusTd = anyRow?.querySelectorAll("td")[6];
-  statusTd?.dispatchEvent(new dom.window.MouseEvent("dblclick", { bubbles: true }));
-  await sleep(100);
-  check(
-    "dblclick em status abre select de status",
-    !!doc.querySelector(".tb tbody tr[data-id] td select.tb-inline"),
-    (doc.querySelector(".tb tbody tr[data-id] td select.tb-inline option[selected]") as HTMLOptionElement | null)?.value ?? ""
-  );
+    const firstEdit = doc.querySelector<HTMLElement>("#ticketsList [data-t-edit]");
+    firstEdit?.click();
+    const tEditOpen = await waitFor(() => doc.getElementById("ticketModal").classList.contains("open"));
+    check("editar abre o modal do chamado", tEditOpen);
+    (doc.querySelector('[data-close="ticketModal"]') as HTMLElement)?.click();
+    await sleep(100);
+    (doc.querySelector('[data-close="ticketsModal"]') as HTMLElement)?.click();
+    await sleep(100);
+    check("modal de chamados fecha", !doc.getElementById("ticketsModal").classList.contains("open"));
+  } else {
+    check("existe menu Chamados", false);
+  }
 
-  // filtro de analista é respeitado na tabela e persiste entre visões
+  // volta para a semana para validar o filtro de analista nas bandas
+  switchView("week");
+  await waitFor(() => doc.querySelectorAll(".band").length >= 2);
+
+  // filtro de analista é respeitado na semana (bandas dos analistas)
   const fAnalyst = doc.getElementById("f-analyst") as HTMLSelectElement | null;
   if (fAnalyst && fAnalyst.options.length > 1) {
     const aid = fAnalyst.options[1].value;
-    const before = doc.querySelectorAll(".tb tbody tr[data-id]").length;
+    const before = doc.querySelectorAll(".band").length;
     fAnalyst.value = aid;
     fAnalyst.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
     await sleep(150);
-    const rowsFiltered = [...doc.querySelectorAll<HTMLElement>(".tb tbody tr[data-id]")];
-    const wrong = rowsFiltered.filter((r) => r.dataset.aid && r.dataset.aid !== aid).length;
-    check("filtro de analista aplicado na tabela", before > 0 && rowsFiltered.length <= before && wrong === 0, rowsFiltered.length + " de " + before + " linhas");
-
-    switchView("load");
-    await sleep(150);
-    switchView("table");
-    await sleep(150);
-    const rowsBack = [...doc.querySelectorAll<HTMLElement>(".tb tbody tr[data-id]")];
-    const wrongBack = rowsBack.filter((r) => r.dataset.aid && r.dataset.aid !== aid).length;
-    check("filtro persiste entre visões", wrongBack === 0, rowsBack.length + " linhas");
+    const rowsFiltered = [...doc.querySelectorAll<HTMLElement>(".band")];
+    const wrong = rowsFiltered.filter((r) => r.dataset.a && r.dataset.a !== aid).length;
+    check("filtro de analista aplicado na semana", before > 0 && rowsFiltered.length < before && wrong === 0, rowsFiltered.length + " de " + before + " bandas");
 
     fAnalyst.value = "";
     fAnalyst.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
     await sleep(150);
-    check("limpar filtro restaura a tabela", doc.querySelectorAll(".tb tbody tr[data-id]").length >= before);
+    check("limpar filtro restaura a semana", doc.querySelectorAll(".band").length >= before);
   } else {
     check("existe select de analista", false);
   }

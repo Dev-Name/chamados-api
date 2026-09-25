@@ -14,11 +14,6 @@
   background: var(--panel);
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
-.bt-pill {
-  background: color-mix(in srgb, var(--prc) 20%, var(--block-mix));
-  border: 1px solid color-mix(in srgb, var(--prc) 55%, transparent);
-  color: color-mix(in srgb, var(--prc) 88%, var(--text));
-}
 .bt-alert { width: 7px; height: 7px; }
 
 /* selo de status: cor do status, sempre visível para leitura rápida */
@@ -45,12 +40,6 @@
 /* nomes/analistas truncados com tooltip completo (truncamento só quando não há espaço físico) */
 .band-label .bname .nm { flex: 1 1 auto; min-width: 0; }
 .dhead .ds { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-
-/* selos compactos para blocos pequenos */
-.blk.tiny.hascade { }
-.blk.tiny { display: flex; align-items: center; gap: 4px; }
-.blk.tiny .bt-title { flex: 1; }
-.blk.tiny .st-badge { display: none; }
 
 /* bloco em destaque ao selecionar */
 .blk.sel { outline: 2px solid var(--primary); outline-offset: -2px; }

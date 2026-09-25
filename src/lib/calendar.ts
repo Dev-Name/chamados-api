@@ -1,5 +1,8 @@
 import dayjs, { Dayjs } from "dayjs";
 
+const MINUTE_MS = 60000;
+const DAY_MS = 86400000;
+
 /** Início nominal da jornada de trabalho (09:00), usado como âncora dos horários. */
 export const WORKDAY_START_HOUR = 9;
 export const WORKDAY_START_MINUTES = WORKDAY_START_HOUR * 60;
@@ -7,6 +10,14 @@ export const WORKDAY_START_MINUTES = WORKDAY_START_HOUR * 60;
 export interface LunchWindow {
   start: number;
   end: number;
+}
+
+/** Janela de ausência/férias de um analista (instantes absolutos). */
+export interface AnalystAbsenceWindow {
+  data_hora_inicio: Date;
+  data_hora_fim: Date;
+  /** Dia inteiro (férias) ou apenas um intervalo parcial (ex.: atestado). */
+  dia_inteiro?: boolean;
 }
 
 export interface AnalystCalendarOptions {
@@ -31,6 +42,12 @@ export interface AnalystCalendarOptions {
   /** Par legado: mesmo intervalo de almoço em todos os dias úteis. */
   lunchStartMinutes?: number | null;
   lunchEndMinutes?: number | null;
+  /**
+   * Ausências/férias do analista. Períodos cobertos são removidos da jornada
+   * (dia inteiro derruba a capacidade do dia; parcial reduz só o intervalo).
+   * O ETA nunca cai dentro de uma ausência.
+   */
+  absences?: AnalystAbsenceWindow[];
 }
 
 type Interval = { start: number; end: number };
@@ -45,11 +62,17 @@ type Interval = { start: number; end: number };
  * A capacidade é a duração do expediente. O almoço, quando cai dentro do
  * expediente, não é alocado: o trabalho para no início e retoma no fim.
  * Ex.: 09:00–17:00 (480) com almoço 12:00–13:00 => 420 min produtivos (09–12 e 13–17).
+ *
+ * As ausências (férias/atestados) informadas em `absences` também são subtraídas
+ * do intervalo produtivo de cada data: um dia inteiro de férias deixa a data sem
+ * capacidade (o ETA pula para o próximo dia alocável) e um intervalo parcial
+ * apenas reduz a janela daquela data.
  */
 export class AnalystCalendar {
   private readonly capacityOf: (dow: number) => number;
   private readonly startOf: (dow: number) => number;
   private readonly lunchOf: (dow: number) => LunchWindow | null;
+  private readonly absences: Array<{ start: number; end: number }>;
 
   // Cursor de agendamento: dia corrente (sempre dia útil) + minutos produtivos já usados.
   private day: Dayjs;
@@ -85,6 +108,10 @@ export class AnalystCalendar {
     const base = dayjs(reference ?? new Date()).startOf("day");
     this.startOf = buildStartOf(options?.startByDay);
     this.lunchOf = buildLunchOf(options);
+    this.absences = (options?.absences ?? []).map((a) => ({
+      start: a.data_hora_inicio.getTime(),
+      end: a.data_hora_fim.getTime(),
+    }));
     this.day = this.beginOfWorkday(this.nextWorkdayAtOrAfter(base));
     this.usedMinutes = 0;
   }
@@ -99,19 +126,23 @@ export class AnalystCalendar {
     return this.workIntervals(dow).reduce((sum, iv) => sum + (iv.end - iv.start), 0);
   }
 
+  /**
+   * `true` quando a data tem ao menos um minuto produtivo (expediente, fora do
+   * almoço e fora das ausências informadas).
+   */
   isWorkDay(date: Dayjs | Date): boolean {
-    return this.capacityOf(dayjs(date).get("day")) > 0;
+    return this.productiveMinutesOn(dayjs(date)) > 0;
   }
 
-  /** Próximo dia útil em ou após `date`. */
+  /** Próximo dia útil (sem férias/ausência de dia inteiro) em ou após `date`. */
   nextWorkdayAtOrAfter(date: Dayjs | Date): Dayjs {
     const cursor = dayjs(date).startOf("day");
     let probe = cursor;
     let guard = 0;
-    while (!this.isWorkDay(probe) || this.productiveCapacityFor(probe.get("day")) <= 0) {
+    while (!this.isWorkDay(probe)) {
       probe = probe.add(1, "day");
-      if (++guard > 14) {
-        throw new Error("Nenhum dia com minutos alocáveis (verifique expediente e almoço)");
+      if (++guard > 730) {
+        throw new Error("Nenhum dia com minutos alocáveis (verifique expediente, almoço e ausências)");
       }
     }
     return probe;
@@ -124,9 +155,10 @@ export class AnalystCalendar {
    *
    * O horário de `date` é interpretado em relação ao expediente:
    * - horário dentro de um intervalo de trabalho => começa ali mesmo;
+   * - horário antes do início do expediente => começa no início do expediente do MESMO dia;
    * - horário no almoço => começa ao retomar o expediente;
-   * - horário no fim/excedendo a jornada, ou antes do início => próximo dia útil;
-   * - fora de um dia útil => começa no próximo dia útil.
+   * - horário no fim/excedendo a jornada => próximo dia útil;
+   * - fora de um dia útil (ou em férias) => começa no próximo dia alocável.
    */
   alignTo(date: Dayjs | Date): void {
     const target = dayjs(date);
@@ -140,13 +172,15 @@ export class AnalystCalendar {
     const start = this.startOf(dow);
     const wall = target.hour() * 60 + target.minute();
     if (wall < start) {
-      this.day = this.beginOfWorkday(this.nextWorkdayAtOrAfter(target.add(1, "day")));
+      // Sem "desalinhamento" de data: um horário antes do expediente
+      // inicia no mesmo dia, no início da jornada (mesma semântica do ETA do front).
+      this.day = this.beginOfWorkday(target);
       this.usedMinutes = 0;
       return;
     }
 
-    const used = workMinutesAt(this.workIntervals(dow), wall);
-    if (used >= this.productiveCapacityFor(dow)) {
+    const used = workMinutesAt(this.intervalsOn(target), wall);
+    if (used >= this.productiveMinutesOn(target)) {
       this.day = this.beginOfWorkday(this.nextWorkdayAtOrAfter(target.add(1, "day")));
       this.usedMinutes = 0;
     } else {
@@ -158,7 +192,7 @@ export class AnalystCalendar {
   /** Próximo instante disponível para iniciar trabalho. */
   nextAvailableAt(): Dayjs {
     this.advanceWhileFullOrNonWorkday();
-    return this.wallDate(this.nextStartMinutes());
+    return this.wallDate(nextStartMinutes(this.intervalsOn(this.day), this.usedMinutes));
   }
 
   /**
@@ -174,7 +208,7 @@ export class AnalystCalendar {
     this.advanceWhileFullOrNonWorkday();
 
     while (remaining > 0) {
-      const free = this.productiveCapacityFor(this.day.get("day")) - this.usedMinutes;
+      const free = this.productiveMinutesOn(this.day) - this.usedMinutes;
       if (remaining <= free) {
         this.usedMinutes += remaining;
         remaining = 0;
@@ -185,7 +219,31 @@ export class AnalystCalendar {
       }
     }
 
-    return this.wallDate(this.dueMinutes());
+    return this.wallDate(dueMinutes(this.intervalsOn(this.day), this.usedMinutes));
+  }
+
+  /** Intervalos produtivos da data (expediente − almoço − ausências que tocam a data). */
+  private intervalsOn(date: Dayjs): Interval[] {
+    const base = this.workIntervals(date.get("day"));
+    if (base.length === 0 || this.absences.length === 0) return base;
+
+    const dayStart = date.startOf("day").valueOf();
+    let intervals = base;
+    for (const ab of this.absences) {
+      const startMs = Math.max(ab.start, dayStart);
+      const endMs = Math.min(ab.end, dayStart + DAY_MS);
+      if (endMs <= startMs) continue;
+      const lo = (startMs - dayStart) / MINUTE_MS;
+      const hi = (endMs - dayStart) / MINUTE_MS;
+      intervals = subtractInterval(intervals, lo, hi);
+      if (intervals.length === 0) return intervals;
+    }
+    return intervals;
+  }
+
+  /** Minutos produtivos disponíveis em uma data específica (expediente − almoço − ausências). */
+  private productiveMinutesOn(date: Dayjs): number {
+    return this.intervalsOn(date).reduce((sum, iv) => sum + (iv.end - iv.start), 0);
   }
 
   private workIntervals(dow: number): Interval[] {
@@ -201,14 +259,6 @@ export class AnalystCalendar {
     return intervals;
   }
 
-  private nextStartMinutes(): number {
-    return nextStartMinutes(this.workIntervals(this.day.get("day")), this.usedMinutes);
-  }
-
-  private dueMinutes(): number {
-    return dueMinutes(this.workIntervals(this.day.get("day")), this.usedMinutes);
-  }
-
   private wallDate(minutesFromMidnight: number): Dayjs {
     return this.day
       .startOf("day")
@@ -219,10 +269,7 @@ export class AnalystCalendar {
   }
 
   private advanceWhileFullOrNonWorkday(): void {
-    while (
-      !this.isWorkDay(this.day) ||
-      this.usedMinutes >= this.productiveCapacityFor(this.day.get("day"))
-    ) {
+    while (!this.isWorkDay(this.day) || this.usedMinutes >= this.productiveMinutesOn(this.day)) {
       this.day = this.beginOfWorkday(this.nextWorkdayAtOrAfter(this.day.add(1, "day")));
       this.usedMinutes = 0;
     }
@@ -274,6 +321,21 @@ function clipLunch(lunch: LunchWindow | null, shiftStart: number, shiftEnd: numb
   const end = Math.min(lunch.end, shiftEnd);
   if (end <= start) return null;
   return { start, end };
+}
+
+/** Remove o intervalo [lo, hi] (minutos desde a meia-noite) dos intervalos. */
+function subtractInterval(intervals: Interval[], lo: number, hi: number): Interval[] {
+  if (hi <= lo) return intervals;
+  const out: Interval[] = [];
+  for (const iv of intervals) {
+    if (hi <= iv.start || lo >= iv.end) {
+      out.push(iv);
+      continue;
+    }
+    if (lo > iv.start) out.push({ start: iv.start, end: Math.min(lo, iv.end) });
+    if (hi < iv.end) out.push({ start: Math.max(hi, iv.start), end: iv.end });
+  }
+  return out;
 }
 
 function workMinutesAt(intervals: Interval[], wall: number): number {

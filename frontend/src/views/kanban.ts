@@ -23,7 +23,7 @@ function cardHtml(t: Ticket, a: Analyst): string {
   const late = isOverdue(t);
   const dep = t.dependsOnTicketId != null ? "⛓" : "";
   const tooltip =
-    `#${t.id} ${t.title}\n${t.category.name} • ${statusLabel[t.status] || t.status}${late ? " • ATRASADO" : ""}\n` +
+    `#${t.id} ${t.title}\n${t.category.name} • ${statusLabel[t.status] || t.status}${late ? " • Atrasado" : ""}\n` +
     `analista: ${a.name}\nestimado: ${fmtNum(t.estimatedMinutes)}${t.workedMinutes ? " • trabalhado: " + fmtNum(t.workedMinutes) : ""}` +
     (t.startDate ? `\n${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}` : "");
   return `<article class="kb-card${late ? " late" : ""}" draggable="true" data-id="${t.id}" data-aid="${a.id}" title="${esc(tooltip)}">

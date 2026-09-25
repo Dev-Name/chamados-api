@@ -1,7 +1,7 @@
 import dayjs, { Dayjs } from "dayjs";
 import { Analyst, Prisma, TicketStatus } from "@prisma/client";
 import { prisma, CycleDependencyError, AnalystNotFoundError } from "../lib/errors";
-import { AnalystCalendar } from "../lib/calendar";
+import { AnalystCalendar, type AnalystAbsenceWindow } from "../lib/calendar";
 
 type ActiveTicket = Prisma.TicketGetPayload<{ include: { dependsOn: true } }>;
 
@@ -29,8 +29,15 @@ export async function recalculateAnalystQueue(analystId: number): Promise<Recalc
     throw new AnalystNotFoundError(analystId);
   }
 
+  // Ausências/férias do analista: o cálculo da jornada e do tempo disponível deve
+  // pular/subtrair esses períodos, então o ETA nunca cai dentro de uma ausência.
+  const absenceWindows: AnalystAbsenceWindow[] = await prisma.analystAbsence.findMany({
+    where: { analystId },
+    select: { data_hora_inicio: true, data_hora_fim: true, dia_inteiro: true },
+  });
+
   const active = await prisma.ticket.findMany({
-    where: { analystId, status: { in: ACTIVE_STATUSES } },
+    where: { assignees: { some: { id: analystId } }, status: { in: ACTIVE_STATUSES } },
     orderBy: [{ priority: "asc" }, { position: "asc" }, { id: "asc" }],
     include: { dependsOn: true },
   });
@@ -66,6 +73,7 @@ export async function recalculateAnalystQueue(analystId: number): Promise<Recalc
     lunchEndByDay: analyst.weeklyLunchEndMinutes,
     lunchStartMinutes: analyst.lunchStartMinutes,
     lunchEndMinutes: analyst.lunchEndMinutes,
+    absences: absenceWindows,
   });
   const scheduledDue = new Map<number, Dayjs>();
   const unschedulable: RecalcResult["unschedulable"] = [];
@@ -91,15 +99,22 @@ export async function recalculateAnalystQueue(analystId: number): Promise<Recalc
     }
 
     const earliest = calendar.nextAvailableAt();
+    // Data de início manual (ou de chamado já em andamento) vira limite mínimo
+    const isManual = !!ticket.manualDates;
     const preserveStart =
-      ticket.status !== TicketStatus.BACKLOG && ticket.startDate ? dayjs(ticket.startDate) : null;
+      ticket.startDate && (isManual || ticket.status !== TicketStatus.BACKLOG) ? dayjs(ticket.startDate) : null;
     const start = maxDay(earliest, depDue, preserveStart);
 
     calendar.alignTo(start);
     const remaining = Math.max(ticket.estimatedMinutes - ticket.workedMinutes, 0);
-    const due = remaining > 0 ? calendar.allocate(remaining) : start;
+    const computedDue = remaining > 0 ? calendar.allocate(remaining) : start;
 
-    scheduledDue.set(ticket.id, due);
+    // Prazo manual é respeitado como limite mínimo: nunca termina antes do informado
+    const due =
+      isManual && ticket.dueDate && dayjs(ticket.dueDate).isAfter(computedDue) ? dayjs(ticket.dueDate) : computedDue;
+
+    // Usa a posição real de capacidade para alinhar dependentes (sem o efeito do prazo manual)
+    scheduledDue.set(ticket.id, computedDue);
     updates.push(
       prisma.ticket.update({
         where: { id: ticket.id },

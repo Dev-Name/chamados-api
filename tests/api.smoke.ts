@@ -54,6 +54,20 @@ async function main() {
   // limpa o analista de teste
   await api("/analysts/" + created.id, "DELETE");
 
+  // remoção de foto via photo: null (contrato usado pelo "Remover foto" do modal)
+  const PNG =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const withPhoto = await api("/analysts", "POST", {
+    name: "Teste Foto",
+    weeklyCapacityMinutes: [0, 480, 480, 480, 480, 480, 0],
+    photo: PNG,
+  });
+  assert(withPhoto.photo === PNG, "photo deveria ser persistida no create");
+  const semPhoto = await api("/analysts/" + withPhoto.id, "PATCH", { photo: null });
+  assert(semPhoto.photo === null, "photo deveria ser removida com photo: null");
+  await api("/analysts/" + withPhoto.id, "DELETE");
+  console.log("API + remoção de foto OK");
+
   const { id: ticketId, estimatedMinutes } = (await queue(1)).find((t: { id: number }) => t.id === 2);
   assert(estimatedMinutes === 240, "ticket #2 deveria ter 240 min de estimativa");
 

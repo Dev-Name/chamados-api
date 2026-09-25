@@ -1,9 +1,23 @@
 export type GridViewId = "day" | "week" | "month" | "year";
-export type ViewId = GridViewId | "kanban" | "table" | "load" | "gantt";
+export type ViewId = GridViewId | "kanban" | "load" | "gantt";
 
 export interface Category {
   id: number;
   name: string;
+}
+
+export type AbsenceTypeLabel = "FERIAS" | "FOLGA" | "ATESTADO" | "OUTRO";
+
+export interface AnalystAbsence {
+  id: number;
+  analystId: number;
+  tipo: AbsenceTypeLabel;
+  dia_inteiro: boolean;
+  data_hora_inicio: string;
+  data_hora_fim: string;
+  descricao: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Analyst {
@@ -18,6 +32,8 @@ export interface Analyst {
   lunchEndMinutes: number | null;
   weeklyLunchStartMinutes: number[];
   weeklyLunchEndMinutes: number[];
+  data_desligamento: string | null;
+  absences: AnalystAbsence[];
   tickets: Ticket[];
 }
 
@@ -27,6 +43,7 @@ export interface Ticket {
   categoryId: number;
   category: Category;
   analystId: number | null;
+  analystIds: number[];
   estimatedMinutes: number;
   workedMinutes: number;
   priority: number;
@@ -36,6 +53,8 @@ export interface Ticket {
   position: number;
   startDate: string | null;
   dueDate: string | null;
+  manualDates: boolean;
+  completedAt: string | null;
 }
 
 export interface Filters {

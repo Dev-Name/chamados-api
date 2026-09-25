@@ -16,9 +16,9 @@
     </div>
   </div>
   <nav class="side-nav">
-    <button id="newTicket" class="m-item" title="Novo chamado">
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <span class="it">Novo chamado</span>
+    <button id="ticketsMenu" class="m-item" title="Chamados" aria-pressed="false">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M3 10h18"/><path d="M8 15h5"/></svg>
+      <span class="it">Chamados</span>
     </button>
     <button id="settingsBtn" class="m-item" title="Cores e aparência">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -83,8 +83,7 @@
           <button data-view="year" title="Visão do ano (tecla A)">Ano</button>
           <span class="view-sep"></span>
           <button data-view="kanban" title="Quadro Kanban (tecla K)">Quadro</button>
-          <button data-view="table" title="Tabela (tecla T)">Tabela</button>
-          <button data-view="load" title="Carga horária (tecla L)">Carga</button>
+          <button data-view="load" title="Carga horária (tecla C)">Carga</button>
           <button data-view="gantt" title="Diagrama de Gantt (tecla G)">Gantt</button>
         </div>
       </div>
@@ -156,9 +155,9 @@
 
 <div class="help-backdrop" id="helpBackdrop"></div>
 <div class="help-pop" id="helpPop" role="dialog" aria-modal="true" aria-label="Como funciona">
-  <p><b>O que é isto:</b> o acompanhamento de chamados da equipe. As 8 visões compartilham os mesmos filtros e cores.</p>
+  <p><b>O que é isto:</b> o acompanhamento de chamados da equipe. As 7 visões compartilham os mesmos filtros e cores.</p>
   <ul>
-    <li><b>8 formas de ver:</b> <kbd>D</kbd> dia, <kbd>W</kbd> semana, <kbd>M</kbd> mês, <kbd>A</kbd> ano, <kbd>K</kbd> quadro, <kbd>T</kbd> tabela, <kbd>C</kbd> carga, <kbd>G</kbd> gantt.</li>
+    <li><b>7 formas de ver:</b> <kbd>D</kbd> dia, <kbd>W</kbd> semana, <kbd>M</kbd> mês, <kbd>A</kbd> ano, <kbd>K</kbd> quadro, <kbd>C</kbd> carga, <kbd>G</kbd> gantt.</li>
     <li><b>No quadro:</b> arraste um cartão entre colunas para mudar o status; a fila é reprogramada sozinha.</li>
     <li><b>Criar:</b> clique num espaço vazio no dia/semana, ou em <b>Novo chamado</b>.</li>
     <li><b>Reagendar:</b> arraste o bloco para outro dia/horário. <b>Ver/editar:</b> clique no bloco.</li>
@@ -189,26 +188,63 @@
       <div class="field"><label>Título</label><input id="t-title" placeholder="O que precisa ser feito?"></div>
       <div class="row2">
         <div class="field"><label>Categoria</label><select id="t-category"></select></div>
-        <div class="field"><label>Analista</label><select id="t-analyst"></select></div>
+        <div class="field"><label>Prioridade (P1 a P5)</label><select id="t-priority"></select></div>
+      </div>
+      <div class="field">
+        <label>Analistas Responsáveis</label>
+        <div class="ana-combo" id="t-assignees"></div>
       </div>
       <div class="row2">
-        <div class="field"><label>Prioridade (1 = mais urgente)</label><select id="t-priority"></select></div>
         <div class="field"><label>Tempo previsto (min)</label><input id="t-minutes" type="number" min="1" step="5" value="60"></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label>Já trabalhado (min)</label><input id="t-worked" type="number" min="0" step="5" value="0"></div>
-        <div class="field"><label>Restante (min)</label><input id="t-remain" type="number" step="5" disabled placeholder="auto"></div>
-      </div>
-      <div class="row2">
         <div class="field"><label>Status</label><select id="t-status"></select></div>
-        <div class="field"><label>Só começa depois de (opcional)</label><select id="t-depends" data-null-label="— nenhum —"></select></div>
       </div>
-      <div class="field"><label>Nova categoria</label><input id="t-newcat" placeholder="Digite para criar uma nova categoria..."></div>
+      <div class="row2">
+        <div class="field"><label>Data de início</label><input id="t-start" type="datetime-local"></div>
+        <div class="field"><label>Data prevista de término</label><input id="t-due" type="datetime-local"></div>
+      </div>
+      <div class="field">
+        <label>Só começa depois de (opcional)</label>
+        <select id="t-depends" data-null-label="— nenhum —"></select>
+      </div>
+      <div class="field" id="t-eta-field">
+        <label>Término Estimado pelo Sistema</label>
+        <div class="eta-wrap"><span class="eta-badge" id="t-eta">—</span></div>
+      </div>
+      <div class="field" id="t-completed-wrap" hidden>
+        <label>Data de conclusão</label><input id="t-completed" type="datetime-local">
+      </div>
     </div>
     <div class="modal-foot">
-      <button class="danger" id="t-delete" hidden>Excluir</button>
       <button class="ghost" data-close="ticketModal">Cancelar</button>
       <button id="t-save" class="primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="ticketsModal">
+  <div class="modal">
+    <div class="modal-head a-head">
+      <div class="a-head-left">
+        <div class="a-head-titles">
+          <h2 id="t-modal-title">Chamados</h2>
+          <p class="a-modal-sub" id="t-modal-sub">Gerencie as demandas, os prazos e o andamento</p>
+        </div>
+      </div>
+      <div class="a-head-right">
+        <button class="primary" id="t-add"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo chamado</button>
+        <button class="modal-close" data-close="ticketsModal">×</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="t-filterbar" id="tFilterBar">
+        <select id="t-f-analyst" title="Filtrar por analista"></select>
+        <select id="t-f-category" title="Filtrar por categoria"></select>
+        <select id="t-f-status" title="Filtrar por status"></select>
+        <select id="t-f-priority" title="Filtrar por prioridade"></select>
+        <input id="t-f-q" type="search" placeholder="Buscar por título ou #id...">
+        <button id="t-f-clear" class="ghost sm" title="Limpar filtros">Limpar</button>
+      </div>
+      <div class="t-list" id="ticketsList"></div>
     </div>
   </div>
 </div>

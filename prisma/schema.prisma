@@ -43,11 +43,44 @@ model Analyst {
   dailyCapacityMinutes Int      @default(480)
   // Dias úteis da semana usando getDay() do JS (0=Dom, 1=Seg, ..., 6=Sáb)
   workDays             Int[]
+  // Data de desligamento do funcionário (date-only gravado à meia-noite UTC).
+  // null = continua ativo. Quando <= data atual, o analista é tratado como inativo.
+  data_desligamento    DateTime?
   tickets              Ticket[]
+  // Chamados atribuídos ao analista (m2m: um chamado pode ter vários analistas)
+  assignedTickets      Ticket[]         @relation("TicketAssignees")
+  absences             AnalystAbsence[]
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@map("analysts")
+}
+
+enum AbsenceType {
+  FERIAS
+  FOLGA
+  ATESTADO
+  OUTRO
+}
+
+// Ausência/licença de um analista. Pode ocupar o dia inteiro (dia_inteiro = true,
+// ex.: férias) ou apenas um intervalo de horas/minutos (ex.: atestado de consulta).
+model AnalystAbsence {
+  id               Int         @id @default(autoincrement())
+  analystId        Int
+  analyst          Analyst     @relation(fields: [analystId], references: [id], onDelete: Cascade)
+  tipo             AbsenceType
+  // true = ocupa o dia todo; false = apenas o intervalo [data_hora_inicio, data_hora_fim]
+  dia_inteiro      Boolean     @default(true)
+  data_hora_inicio DateTime
+  data_hora_fim    DateTime
+  // Breve justificativa/motivo (ex.: "Consulta médica", "Folga compensatória")
+  descricao        String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([analystId, data_hora_inicio, data_hora_fim])
+  @@map("analyst_absences")
 }
 
 model Category {
@@ -67,6 +100,8 @@ model Ticket {
   // Analista responsável; opcional (filas sem dono ficam de fora do recálculo)
   analystId        Int?
   analyst          Analyst?     @relation(fields: [analystId], references: [id])
+  // Analistas atribuídos ao chamado (m2m); o responsável (analystId) deve estar nesse conjunto
+  assignees        Analyst[]    @relation("TicketAssignees")
   // Tempo estimado (em minutos) para finalizar o chamado
   estimatedMinutes Int
   // Tempo já trabalhado (em minutos); o motor agenda o tempo RESTANTE
@@ -83,6 +118,10 @@ model Ticket {
   // Campos de planejamento preenchidos/recalculados pelo motor de tempo
   startDate        DateTime?
   dueDate          DateTime?
+  // Datas manuais informadas no modal; o motor as respeita como limite mínimo
+  manualDates      Boolean    @default(false)
+  // Timestamp do encerramento; preenchido automaticamente ao marcar como Concluído
+  completedAt      DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 

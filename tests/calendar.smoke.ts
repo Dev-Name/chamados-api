@@ -105,5 +105,84 @@ const c9e = new AnalystCalendar([], 0, new Date(2026, 8, 15), {
 });
 check("c9e ter sem almoço", c9e.allocate(480).toDate(), "ter 15/09 17:00");
 
+// 10) Ausência/férias de dia inteiro na segunda: a fila pula para terça
+const c10 = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: true, data_hora_inicio: new Date(2026, 8, 14, 0, 0, 0), data_hora_fim: new Date(2026, 8, 14, 23, 59, 59) },
+  ],
+});
+const c10dow = c10.isWorkDay(new Date(2026, 8, 14)) === false && c10.isWorkDay(new Date(2026, 8, 15)) === true;
+if (c10dow) pass++;
+else {
+  fail++;
+  console.log(`FALHOU c10 isWorkDay: férias na segunda deve derrubar o dia (seg=false, ter=true)`);
+}
+check("c10 seg em férias", c10.nextAvailableAt().toDate(), "ter 15/09 09:00");
+
+// 11) Férias de sexta (18/09) a domingo (20/09): retoma na segunda
+const c11 = new AnalystCalendar(work, 480, new Date(2026, 8, 18), {
+  absences: [
+    { dia_inteiro: true, data_hora_inicio: new Date(2026, 8, 18, 0, 0, 0), data_hora_fim: new Date(2026, 8, 20, 23, 59, 59) },
+  ],
+});
+check("c11 férias fim de semana", c11.nextAvailableAt().toDate(), "seg 21/09 09:00");
+
+// 12) Atestado parcial 14:00–16:30 na segunda: aloca e não atravessa o intervalo
+const c12 = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: false, data_hora_inicio: new Date(2026, 8, 14, 14, 0, 0), data_hora_fim: new Date(2026, 8, 14, 16, 30, 0) },
+  ],
+});
+check("c12 antes do atestado (180min)", c12.allocate(180).toDate(), "seg 14/09 12:00");
+check("c12 próximo após 180min", c12.nextAvailableAt().toDate(), "seg 14/09 12:00");
+
+const c12a = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: false, data_hora_inicio: new Date(2026, 8, 14, 14, 0, 0), data_hora_fim: new Date(2026, 8, 14, 16, 30, 0) },
+  ],
+});
+check("c12a enche a manhã", c12a.allocate(300).toDate(), "seg 14/09 14:00");
+check("c12a retoma após o atestado", c12a.nextAvailableAt().toDate(), "seg 14/09 16:30");
+
+// 12b) 300 min atingem exatamente o início do atestado (não "atravessa" a ausência)
+const c12b = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: false, data_hora_inicio: new Date(2026, 8, 14, 14, 0, 0), data_hora_fim: new Date(2026, 8, 14, 16, 30, 0) },
+  ],
+});
+check("c12b hora exata do atestado", c12b.allocate(300).toDate(), "seg 14/09 14:00");
+
+// 12c) Exceder o dia com atestado transborda para a manhã da terça
+const c12c = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: false, data_hora_inicio: new Date(2026, 8, 14, 14, 0, 0), data_hora_fim: new Date(2026, 8, 14, 16, 30, 0) },
+  ],
+});
+check("c12c transborda após atestado", c12c.allocate(331).toDate(), "ter 15/09 09:01");
+
+// 13) Datas manuais antes do expediente (08:00) NÃO podem pular o dia: iniciam 09:00 do MESMO dia
+const c13 = new AnalystCalendar(work, 480, new Date(2026, 8, 14));
+c13.alignTo(dayjs("2026-09-14T08:00:00").toDate());
+check("c13 start antes do expediente", c13.nextAvailableAt().toDate(), "seg 14/09 09:00");
+
+// 14) Mesmo comportamento com dia em atestado parcial à tarde (08:00 => 09:00 do mesmo dia)
+const c14 = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: false, data_hora_inicio: new Date(2026, 8, 14, 14, 0, 0), data_hora_fim: new Date(2026, 8, 14, 16, 30, 0) },
+  ],
+});
+c14.alignTo(dayjs("2026-09-14T08:00:00").toDate());
+check("c14 start antes do expediente com atestado", c14.nextAvailableAt().toDate(), "seg 14/09 09:00");
+check("c14 aloca junto ao atestado", c14.allocate(300).toDate(), "seg 14/09 14:00");
+
+// 15) Agentamento DENTRO de uma data em férias avança para a primeira data alocável
+const c15 = new AnalystCalendar(work, 480, new Date(2026, 8, 14), {
+  absences: [
+    { dia_inteiro: true, data_hora_inicio: new Date(2026, 8, 14, 0, 0, 0), data_hora_fim: new Date(2026, 8, 14, 23, 59, 59) },
+  ],
+});
+c15.alignTo(dayjs("2026-09-14T09:00:00").toDate());
+check("c15 alvo em férias", c15.nextAvailableAt().toDate(), "ter 15/09 09:00");
+
 console.log(`\n${pass} passaram, ${fail} falharam`);
 process.exit(fail === 0 ? 0 : 1);

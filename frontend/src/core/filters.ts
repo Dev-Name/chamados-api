@@ -4,10 +4,21 @@ import { getCleanName } from "./format";
 
 export const DEFAULT_FILTERS: Filters = { analyst: "", category: "0", status: "", priority: "", q: "" };
 
-function isAll(v: string, zeroIsAll = false): boolean {
+export function isAll(v: string, zeroIsAll = false): boolean {
   if (v === "" || v === "ALL") return true;
   if (zeroIsAll && v === "0") return true;
   return false;
+}
+
+export function matchesFilters(t: Ticket, f: Filters): boolean {
+  if (f.status && !isAll(f.status) && t.status !== f.status) return false;
+  if (f.priority && !isAll(f.priority) && t.priority !== Number(f.priority)) return false;
+  if (f.category && !isAll(f.category, true) && Number(f.category) !== t.category.id) return false;
+  if (f.q) {
+    const q = f.q.toLowerCase();
+    if (!`#${t.id} ${t.title}`.toLowerCase().includes(q)) return false;
+  }
+  return true;
 }
 
 export function visibleAnalysts(): Analyst[] {
@@ -17,22 +28,15 @@ export function visibleAnalysts(): Analyst[] {
 }
 
 export function visibleTicket(t: Ticket): boolean {
-  if (store.filters.status && !isAll(store.filters.status) && t.status !== store.filters.status) return false;
-  if (store.filters.priority && !isAll(store.filters.priority) && t.priority !== Number(store.filters.priority)) return false;
-  if (store.filters.category && !isAll(store.filters.category, true) && Number(store.filters.category) !== t.category.id) return false;
-  if (store.filters.q) {
-    const q = store.filters.q.toLowerCase();
-    if (!`#${t.id} ${t.title}`.toLowerCase().includes(q)) return false;
-  }
-  return true;
+  return matchesFilters(t, store.filters);
 }
 
 export function fillFilterSelects(): void {
-  const opts: Record<string, Array<string[]>> = {
-    "f-analyst": [["", "Todos os analistas"], ...store.analysts.map((a) => [String(a.id), getCleanName(a.name)])],
-    "f-category": [["0", "Todas as categorias"], ...store.categories.map((c) => [String(c.id), c.name])],
-    "f-status": [["", "Todos os status"], ...Object.entries(statusLabel)],
-    "f-priority": [["", "Todas as prioridades"], ...[1, 2, 3, 4, 5].map((p) => [String(p), "P" + p])],
+  const opts: Record<string, Array<[string, string]>> = {
+    "f-analyst": [["", "Todos os analistas"], ...store.analysts.map((a) => [String(a.id), getCleanName(a.name)] as [string, string])],
+    "f-category": [["0", "Todas as categorias"], ...store.categories.map((c) => [String(c.id), c.name] as [string, string])],
+    "f-status": [["", "Todos os status"], ...Object.entries(statusLabel) as Array<[string, string]>],
+    "f-priority": [["", "Todas as prioridades"], ...[1, 2, 3, 4, 5].map((p) => [String(p), "P" + p] as [string, string])],
   };
   const keyMap: Record<string, "analyst" | "category" | "status" | "priority"> = {
     "f-analyst": "analyst",
@@ -41,18 +45,27 @@ export function fillFilterSelects(): void {
     "f-priority": "priority",
   };
   for (const id of Object.keys(opts)) {
-    const sel = document.getElementById(id) as HTMLSelectElement | null;
-    if (!sel) continue;
     const prev = store.filters[keyMap[id]];
-    sel.innerHTML = "";
-    for (const [v, label] of opts[id]) {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = label;
-      sel.appendChild(o);
-    }
-    sel.value = opts[id].some(([v]) => String(v) === String(prev)) ? String(prev) : opts[id][0][0];
+    fillSelectFromPairs(id, opts[id], prev);
   }
+}
+
+/** Preenche um <select> com pares [valor, rótulo], preservando seleção anterior quando possível. */
+export function fillSelectFromPairs<K extends string>(
+  id: string,
+  pairs: Array<[K, string]>,
+  prev: string
+): void {
+  const sel = document.getElementById(id) as HTMLSelectElement | null;
+  if (!sel) return;
+  sel.innerHTML = "";
+  for (const [v, label] of pairs) {
+    const o = document.createElement("option");
+    o.value = String(v);
+    o.textContent = label;
+    sel.appendChild(o);
+  }
+  sel.value = pairs.some(([v]) => String(v) === String(prev)) ? String(prev) : String(pairs[0][0]);
 }
 
 export function categoriesFromTickets(): Array<{ id: number; name: string }> {

@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { TicketStatus } from "@prisma/client";
+import { Prisma, TicketStatus } from "@prisma/client";
 import { prisma } from "../lib/errors";
 import { parseId } from "../lib/http";
 import { recalculateAnalystQueue } from "../services/ticket.service";
+import { isTerminated } from "../lib/availability";
+import { ticketDTO } from "../lib/ticket-dto";
 
 export const ticketsRouter = Router();
 
@@ -10,18 +12,32 @@ export const TICKET_STATUSES = Object.values(TicketStatus);
 
 const MAX_TITLE = 300;
 
+/** Converte um valor para Date válido (aceita ISO "YYYY-MM-DDTHH:mm:ss" ou "YYYY-MM-DD"). */
+function normDate(value: unknown, field: string): { error?: string; value?: Date | null } {
+  if (value === null || value === "") return { value: null };
+  if (typeof value !== "string") return { error: `${field} inválido` };
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return { error: `${field} inválido` };
+  return { value: d };
+}
+
 function normTicketInput(body: Record<string, unknown>): {
   error?: string;
   data?: {
     title?: string;
     categoryId?: number;
     analystId?: number | null;
+    analystIds?: number[];
     estimatedMinutes?: number;
     workedMinutes?: number;
     priority?: number;
     status?: TicketStatus;
     dependsOnTicketId?: number | null;
     position?: number;
+    startDate?: Date | null;
+    dueDate?: Date | null;
+    completedAt?: Date | null;
+    manualDates?: boolean;
   };
 } {
   const data: NonNullable<ReturnType<typeof normTicketInput>["data"]> = {};
@@ -45,6 +61,13 @@ function normTicketInput(body: Record<string, unknown>): {
       if (!Number.isInteger(id) || id <= 0) return { error: "analystId inválido" };
       data.analystId = id;
     }
+  }
+  if (body.analystIds !== undefined) {
+    if (!Array.isArray(body.analystIds)) return { error: "analystIds deve ser uma lista de ids" };
+    const ids = body.analystIds.map(Number);
+    if (ids.some((id) => !Number.isInteger(id) || id <= 0)) return { error: "analystIds inválido" };
+    if (new Set(ids).size !== ids.length) return { error: "analystIds não pode ter ids repetidos" };
+    data.analystIds = ids;
   }
   if (body.estimatedMinutes !== undefined) {
     const minutes = Number(body.estimatedMinutes);
@@ -76,6 +99,17 @@ function normTicketInput(body: Record<string, unknown>): {
       data.dependsOnTicketId = id;
     }
   }
+  for (const key of ["startDate", "dueDate", "completedAt"] as const) {
+    if (body[key] !== undefined) {
+      const r = normDate(body[key], key);
+      if (r.error) return { error: r.error };
+      data[key] = r.value ?? null;
+    }
+  }
+  if (body.manualDates !== undefined) {
+    if (typeof body.manualDates !== "boolean") return { error: "manualDates inválido" };
+    data.manualDates = body.manualDates;
+  }
   if (body.position !== undefined) {
     const position = Number(body.position);
     if (!Number.isInteger(position) || position < 0) return { error: "position inválida" };
@@ -89,6 +123,7 @@ function normTicketInput(body: Record<string, unknown>): {
 async function validateRefs(fields: {
   categoryId?: number;
   analystId?: number | null;
+  analystIds?: number[];
   dependsOnTicketId?: number | null;
 }): Promise<string | null> {
   if (fields.categoryId != null) {
@@ -99,9 +134,36 @@ async function validateRefs(fields: {
     const ana = await prisma.analyst.findUnique({ where: { id: fields.analystId }, select: { id: true } });
     if (!ana) return "analystId não existe";
   }
+  if (fields.analystIds && fields.analystIds.length > 0) {
+    const found = await prisma.analyst.findMany({ where: { id: { in: fields.analystIds } }, select: { id: true } });
+    if (found.length !== fields.analystIds.length) return "Um ou mais analysts não existem";
+  }
   if (fields.dependsOnTicketId != null) {
     const dep = await prisma.ticket.findUnique({ where: { id: fields.dependsOnTicketId }, select: { id: true } });
     if (!dep) return "dependsOnTicketId não existe";
+  }
+  return null;
+}
+
+/**
+ * Bloqueia novas atribuições a analistas desligados (data_desligamento <= hoje)
+ * ou ausentes no instante atual (now dentro de um intervalo de ausência/licença).
+ */
+async function ensureAnalystAssignable(analystId: number): Promise<string | null> {
+  const ana = await prisma.analyst.findUnique({
+    where: { id: analystId },
+    include: { absences: { select: { data_hora_inicio: true, data_hora_fim: true } } },
+  });
+  if (!ana) return null;
+  if (isTerminated(ana.data_desligamento)) {
+    return "Analista desligado não pode receber novos chamados";
+  }
+  const now = new Date();
+  const absent = (ana.absences || []).some(
+    (a) => a.data_hora_inicio.getTime() <= now.getTime() && now.getTime() <= a.data_hora_fim.getTime()
+  );
+  if (absent) {
+    return "Analista ausente não pode receber novos chamados no momento";
   }
   return null;
 }
@@ -113,7 +175,7 @@ ticketsRouter.post("/", async (req, res, next) => {
       res.status(400).json({ error: parsed.error });
       return;
     }
-    const { analystId, ...rest } = parsed.data;
+    const { analystIds, ...rest } = parsed.data;
     const title = rest.title;
     const categoryId = rest.categoryId;
     const estimatedMinutes = rest.estimatedMinutes;
@@ -126,16 +188,34 @@ ticketsRouter.post("/", async (req, res, next) => {
       res.status(400).json({ error: "workedMinutes não pode ser maior que estimatedMinutes" });
       return;
     }
-    const dependRefErr = await validateRefs({ categoryId, analystId: analystId ?? null, dependsOnTicketId: rest.dependsOnTicketId ?? null });
+    const assigneeIds = analystIds ?? [];
+    const analystId = assigneeIds[0] ?? null;
+    const dependRefErr = await validateRefs({
+      categoryId,
+      analystId: analystId ?? null,
+      analystIds: assigneeIds,
+      dependsOnTicketId: rest.dependsOnTicketId ?? null,
+    });
     if (dependRefErr) {
       res.status(400).json({ error: dependRefErr });
       return;
     }
+    for (const id of assigneeIds) {
+      const assignErr = await ensureAnalystAssignable(id);
+      if (assignErr) { res.status(400).json({ error: assignErr }); return; }
+    }
 
     const maxPos = analystId
-      ? (await prisma.ticket.aggregate({ where: { analystId }, _max: { position: true } }))._max.position
+      ? (await prisma.ticket.aggregate({ where: { assignees: { some: { id: analystId } } }, _max: { position: true } }))._max.position
       : 0;
     const position = rest.position ?? (maxPos ?? -1) + 1;
+    const status = rest.status ?? TicketStatus.BACKLOG;
+    const completedAt =
+      rest.completedAt !== undefined
+        ? (rest.completedAt ?? null)
+        : status === TicketStatus.COMPLETED
+          ? new Date()
+          : null;
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -143,15 +223,23 @@ ticketsRouter.post("/", async (req, res, next) => {
         categoryId,
         estimatedMinutes,
         priority: rest.priority ?? 5,
-        status: rest.status ?? TicketStatus.BACKLOG,
+        status,
         workedMinutes: rest.workedMinutes ?? 0,
         dependsOnTicketId: rest.dependsOnTicketId ?? null,
         analystId: analystId ?? null,
         position,
+        startDate: rest.startDate ?? null,
+        dueDate: rest.dueDate ?? null,
+        manualDates: rest.manualDates ?? false,
+        completedAt,
+        ...(assigneeIds.length > 0
+          ? { assignees: { connect: assigneeIds.map((id) => ({ id })) } }
+          : {}),
       },
+      include: { assignees: { select: { id: true } } },
     });
-    await recalcTicketAffected(analystId ?? null, ticket.dependsOnTicketId);
-    res.status(201).json(ticket);
+    await recalcTicketAffected(ticket.id);
+    res.status(201).json(ticketDTO(ticket));
   } catch (error) {
     next(error);
   }
@@ -161,11 +249,16 @@ ticketsRouter.patch("/:id", async (req, res, next) => {
   try {
     const ticketId = parseId(req.params.id);
     if (!ticketId) { res.status(400).json({ error: "ID inválido" }); return; }
-    const previous = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    const previous = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { assignees: { select: { id: true } } },
+    });
     if (!previous) {
       res.status(404).json({ error: "Chamado não encontrado" });
       return;
     }
+    const previousAssigneeIds = (previous.assignees ?? []).map((a) => a.id);
+    const previousAssigneeSet = new Set(previousAssigneeIds);
 
     const parsed = normTicketInput(req.body);
     if (parsed.error || !parsed.data) {
@@ -177,6 +270,22 @@ ticketsRouter.patch("/:id", async (req, res, next) => {
       return;
     }
 
+    const newAssigneeIds =
+      parsed.data.analystIds !== undefined
+        ? parsed.data.analystIds
+        : parsed.data.analystId !== undefined
+          ? parsed.data.analystId != null
+            ? [parsed.data.analystId]
+            : []
+          : undefined;
+    const nextAssigneeIds = newAssigneeIds ?? previousAssigneeIds;
+    const nextResponsibleId: number | null =
+      parsed.data.analystIds !== undefined
+        ? (parsed.data.analystIds[0] ?? null)
+        : parsed.data.analystId !== undefined
+          ? (parsed.data.analystId ?? null)
+          : previous.analystId;
+
     // Valida workedMinutes <= estimatedMinutes considerando os valores resultantes
     const effectiveEstimated = parsed.data.estimatedMinutes ?? previous.estimatedMinutes;
     const effectiveWorked = parsed.data.workedMinutes ?? previous.workedMinutes;
@@ -187,28 +296,59 @@ ticketsRouter.patch("/:id", async (req, res, next) => {
 
     const refErr = await validateRefs({
       categoryId: parsed.data.categoryId ?? previous.categoryId,
-      analystId: parsed.data.analystId !== undefined ? (parsed.data.analystId ?? null) : previous.analystId,
-      dependsOnTicketId: parsed.data.dependsOnTicketId !== undefined ? (parsed.data.dependsOnTicketId ?? null) : previous.dependsOnTicketId,
+      analystId: nextResponsibleId,
+      analystIds: newAssigneeIds !== undefined ? nextAssigneeIds : undefined,
+      dependsOnTicketId:
+        parsed.data.dependsOnTicketId !== undefined ? (parsed.data.dependsOnTicketId ?? null) : previous.dependsOnTicketId,
     });
     if (refErr) {
       res.status(400).json({ error: refErr });
       return;
     }
 
-    const ticket = await prisma.ticket.update({ where: { id: ticketId }, data: parsed.data });
-
-    // Recalcula o analista novo (ou o atual se não mudou)
-    const newAnalystId = parsed.data.analystId !== undefined ? (parsed.data.analystId ?? null) : previous.analystId;
-    await recalcTicketAffected(
-      newAnalystId,
-      parsed.data.dependsOnTicketId !== undefined ? parsed.data.dependsOnTicketId : previous.dependsOnTicketId
-    );
-
-    // Bug fix: recalcula o analista ANTERIOR sempre que o vínculo mudou (inclusive ao desvincular para null)
-    if (parsed.data.analystId !== undefined && parsed.data.analystId !== previous.analystId) {
-      if (previous.analystId != null) await recalculateAnalystQueue(previous.analystId);
+    // Bloqueia apenas NOVAS atribuições a analistas desligados/ausentes
+    for (const id of nextAssigneeIds) {
+      if (previousAssigneeSet.has(id)) continue;
+      const assignErr = await ensureAnalystAssignable(id);
+      if (assignErr) { res.status(400).json({ error: assignErr }); return; }
     }
-    res.json(ticket);
+
+    // Data de conclusão: preenchida ao marcar como Concluído e limpa ao sair do status
+    const nextStatus = parsed.data.status ?? previous.status;
+    let completedAt: Date | null | undefined = parsed.data.completedAt;
+    if (parsed.data.status !== undefined) {
+      if (nextStatus === TicketStatus.COMPLETED && previous.status !== TicketStatus.COMPLETED) {
+        completedAt = completedAt ?? new Date();
+      } else if (nextStatus !== TicketStatus.COMPLETED && previous.status === TicketStatus.COMPLETED) {
+        completedAt = null;
+      }
+    }
+
+    const { analystIds: _ignored, ...patchData } = parsed.data;
+    const update: Prisma.TicketUncheckedUpdateInput = patchData as Prisma.TicketUncheckedUpdateInput;
+    if (parsed.data.analystIds !== undefined) update.analystId = nextResponsibleId;
+    if (update.completedAt === undefined && completedAt !== undefined) update.completedAt = completedAt;
+    if (parsed.data.startDate !== undefined || parsed.data.dueDate !== undefined) update.manualDates = true;
+    if (newAssigneeIds !== undefined) {
+      update.assignees = { set: newAssigneeIds.map((id) => ({ id })) };
+    }
+
+    const ticket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: update,
+      include: { assignees: { select: { id: true } } },
+    });
+
+    // Recalcula todos os analistas impactados: antigos, novos e os das dependências
+    const idsToRecalc = new Set<number>(previousAssigneeIds);
+    for (const id of ticket.assignees.map((a) => a.id)) idsToRecalc.add(id);
+    const depId = parsed.data.dependsOnTicketId !== undefined ? parsed.data.dependsOnTicketId : previous.dependsOnTicketId;
+    if (depId != null) {
+      for (const id of await ticketAssigneeIds(depId)) idsToRecalc.add(id);
+    }
+    await recalcAnalysts(idsToRecalc);
+
+    res.json(ticketDTO(ticket));
   } catch (error) {
     next(error);
   }
@@ -219,32 +359,52 @@ ticketsRouter.delete("/:id", async (req, res, next) => {
     const ticketId = parseId(req.params.id);
     if (!ticketId) { res.status(400).json({ error: "ID inválido" }); return; }
 
-    // Busca o ticket uma única vez — cobre existência e analystId simultaneamente
-    const existing = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { analystId: true } });
+    // Busca o ticket uma única vez — cobre existência e atribuições simultaneamente
+    const existing = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { assignees: { select: { id: true } } },
+    });
     if (!existing) {
       res.status(404).json({ error: "Chamado não encontrado" });
       return;
     }
 
     await prisma.ticket.updateMany({ where: { dependsOnTicketId: ticketId }, data: { dependsOnTicketId: null } });
+    // As linhas de `_TicketAssignees` são removidas em cascata pelo banco
     await prisma.ticket.delete({ where: { id: ticketId } });
-    if (existing.analystId != null) await recalculateAnalystQueue(existing.analystId);
+    await recalcAnalysts(existing.assignees.map((a) => a.id));
     res.status(204).end();
   } catch (error) {
     next(error);
   }
 });
 
-async function recalcTicketAffected(analystId: number | null, dependsOnTicketId: number | null | undefined) {
-  const ids = new Set<number>();
-  if (analystId != null) ids.add(analystId);
-  if (dependsOnTicketId != null) {
-    const analyst = await prisma.ticket
-      .findUnique({ where: { id: dependsOnTicketId }, select: { analystId: true } })
-      .catch(() => null);
-    if (analyst?.analystId != null) ids.add(analyst.analystId);
-  }
-  for (const id of ids) {
+/** Ids dos analistas atribuídos a um chamado (m2m). */
+async function ticketAssigneeIds(ticketId: number): Promise<number[]> {
+  const t = await prisma.ticket
+    .findUnique({ where: { id: ticketId }, select: { assignees: { select: { id: true } } } })
+    .catch(() => null);
+  return (t?.assignees ?? []).map((a) => a.id);
+}
+
+async function recalcAnalysts(ids: Iterable<number>): Promise<void> {
+  for (const id of new Set(ids)) {
     await recalculateAnalystQueue(id);
   }
+}
+
+/** Recalcula todos os analistas impactados por um chamado (os atribuídos + os das dependências). */
+async function recalcTicketAffected(ticketId: number): Promise<void> {
+  const t = await prisma.ticket
+    .findUnique({
+      where: { id: ticketId },
+      select: { assignees: { select: { id: true } }, dependsOnTicketId: true },
+    })
+    .catch(() => null);
+  if (!t) return;
+  const ids = new Set<number>((t.assignees ?? []).map((a) => a.id));
+  if (t.dependsOnTicketId != null) {
+    for (const id of await ticketAssigneeIds(t.dependsOnTicketId)) ids.add(id);
+  }
+  await recalcAnalysts(ids);
 }

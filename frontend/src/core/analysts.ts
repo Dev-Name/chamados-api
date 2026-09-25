@@ -117,3 +117,61 @@ export function avatarHtml(a: Analyst, size?: number): string {
   }
   return `<span class="avatar" title="${esc(a.name)}" style="background:${analystColor(a)};${dim}">${esc((a.name || "?")[0])}</span>`;
 }
+
+// ---------- Disponibilidade (desligamento + férias) ----------
+
+/** Data local do dispositivo no formato AAAA-MM-DD (referência de "hoje"). */
+export function todayLocalISO(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Extrai o date-only (AAAA-MM-DD) de uma data ISO vinda da API. */
+export function isoDateOf(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  return m ? m[1] : null;
+}
+
+/** Analista desligado quando data_desligamento <= hoje. */
+export function isTerminated(a: Analyst, ref: Date = new Date()): boolean {
+  const d = isoDateOf(a.data_desligamento);
+  return d != null && d <= todayLocalISO(ref);
+}
+
+/** Analista ausente quando o instante `ref` cai em algum intervalo de ausência. */
+export function absentOn(a: Analyst, ref: Date = new Date()): boolean {
+  const t = ref.getTime();
+  return (a.absences || []).some((x) => {
+    const s = new Date(x.data_hora_inicio).getTime();
+    const e = new Date(x.data_hora_fim).getTime();
+    return s <= t && t <= e;
+  });
+}
+
+/** Disponível para novas atribuições. */
+export function isAvailableOn(a: Analyst, ref: Date = new Date()): boolean {
+  return !isTerminated(a, ref) && !absentOn(a, ref);
+}
+
+/** Label curto de indisponibilidade, se houver. */
+export function unavailabilityLabel(a: Analyst, ref: Date = new Date()): string | null {
+  if (isTerminated(a, ref)) return "desligado";
+  if (absentOn(a, ref)) return "ausente";
+  return null;
+}
+
+/** Info de opção para selects de atribuição (modal de chamado, tabela). */
+export function analystOptionInfo(
+  a: Analyst,
+  currentId?: number | null
+): { value: string; label: string; disabled: boolean } {
+  const un = unavailabilityLabel(a);
+  return {
+    value: String(a.id),
+    label: un ? `${a.name} (${un})` : a.name,
+    disabled: !!un && a.id !== currentId,
+  };
+}

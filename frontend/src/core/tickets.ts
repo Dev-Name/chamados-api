@@ -125,9 +125,15 @@ export function clearUsedCache(): void {
 }
 
 export function allTickets(): Ticket[] {
-  const out: Ticket[] = [];
-  for (const a of store.analysts) out.push(...a.tickets);
-  return out;
+  const byId = new Map<number, Ticket>();
+  for (const a of store.analysts) {
+    for (const t of a.tickets) {
+      const prev = byId.get(t.id);
+      // Com m2m o mesmo chamado aparece em várias filas; prefere a cópia do responsável
+      if (!prev || a.id === t.analystId) byId.set(t.id, t);
+    }
+  }
+  return [...byId.values()];
 }
 
 export function sortedQueue(a: Analyst): Ticket[] {

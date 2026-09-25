@@ -1,12 +1,41 @@
 import { Router } from "express";
+import { AbsenceType } from "@prisma/client";
 import { prisma, AnalystNotFoundError } from "../lib/errors";
 import { parseId } from "../lib/http";
 import { recalculateAnalystQueue, ACTIVE_STATUSES } from "../services/ticket.service";
+import { analystWithQueueDTO } from "../lib/ticket-dto";
+import { fmtBrazilDateTime, fmtLocalDate } from "../lib/availability";
+
+const ABSENCE_TYPES = Object.values(AbsenceType);
+const MAX_DESCRICAO = 300;
 
 export const analystsRouter = Router();
 
 const WEEK = [0, 1, 2, 3, 4, 5, 6];
 const MAX_NAME = 120;
+
+/**
+ * Aceita uma data no formato "AAAA-MM-DD" (ou ISO completo) e retorna
+ * um Date @ meia-noite UTC (date-only). Tri-estado:
+ * - undefined: campo ausente (não alterar)
+ * - null / "": limpar o campo
+ * - Date: valor válido a persistir
+ */
+function parseDateValue(value: unknown): { error?: string; date?: Date | null } {
+  if (value === undefined) return {};
+  if (value === null || value === "") return { date: null };
+  if (typeof value !== "string") return { error: "Data inválida (use AAAA-MM-DD)" };
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(value.trim());
+  if (!m) return { error: "Data inválida (use AAAA-MM-DD)" };
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
+    return { error: "Data inválida (use AAAA-MM-DD)" };
+  }
+  return { date: d };
+}
 
 /**
  * Valida um array por dia da semana com 7 elementos onde cada um é
@@ -185,7 +214,8 @@ analystsRouter.get("/", async (_req, res, next) => {
     const analysts = await prisma.analyst.findMany({
       orderBy: { id: "asc" },
       include: {
-        _count: { select: { tickets: { where: { status: { in: ACTIVE_STATUSES } } } } },
+        absences: { orderBy: [{ data_hora_inicio: "asc" }, { id: "asc" }] },
+        _count: { select: { assignedTickets: { where: { status: { in: ACTIVE_STATUSES } } } } },
       },
     });
     res.json(analysts);
@@ -203,13 +233,14 @@ analystsRouter.get("/with-queues", async (_req, res, next) => {
     const analysts = await prisma.analyst.findMany({
       orderBy: { id: "asc" },
       include: {
-        tickets: {
+        absences: { orderBy: [{ data_hora_inicio: "asc" }, { id: "asc" }] },
+        assignedTickets: {
           orderBy: [{ priority: "asc" }, { position: "asc" }, { id: "asc" }],
-          include: { dependsOn: true, category: true },
+          include: { dependsOn: true, category: true, assignees: { select: { id: true } } },
         },
       },
     });
-    res.json(analysts);
+    res.json(analysts.map((a) => analystWithQueueDTO({ ...a, tickets: a.assignedTickets })));
   } catch (error) {
     next(error);
   }
@@ -222,9 +253,10 @@ analystsRouter.get("/:id/queue", async (req, res, next) => {
     const analyst = await prisma.analyst.findUnique({
       where: { id: analystId },
       include: {
-        tickets: {
+        absences: { orderBy: [{ data_hora_inicio: "asc" }, { id: "asc" }] },
+        assignedTickets: {
           orderBy: [{ priority: "asc" }, { position: "asc" }, { id: "asc" }],
-          include: { dependsOn: true, category: true },
+          include: { dependsOn: true, category: true, assignees: { select: { id: true } } },
         },
       },
     });
@@ -232,7 +264,7 @@ analystsRouter.get("/:id/queue", async (req, res, next) => {
       res.status(404).json({ error: "Analista não encontrado" });
       return;
     }
-    res.json(analyst);
+    res.json(analystWithQueueDTO({ ...analyst, tickets: analyst.assignedTickets }));
   } catch (error) {
     next(error);
   }
@@ -269,12 +301,15 @@ analystsRouter.post("/", async (req, res, next) => {
       }
       photo = accepted;
     }
+    const desligamento = parseDateValue(req.body.data_desligamento);
+    if (desligamento.error) { res.status(400).json({ error: desligamento.error }); return; }
     const analyst = await prisma.analyst.create({
       data: {
         name,
         ...schedule,
         ...lunchFields,
         photo,
+        data_desligamento: desligamento.date === undefined ? null : desligamento.date,
       },
     });
     res.status(201).json(analyst);
@@ -302,6 +337,7 @@ analystsRouter.patch("/:id", async (req, res, next) => {
       weeklyLunchEndMinutes?: number[];
       weeklyStartMinutes?: number[];
       photo?: string | null;
+      data_desligamento?: Date | null;
     } = {};
     if (typeof req.body.name === "string" && req.body.name.trim()) {
       if (req.body.name.trim().length > MAX_NAME) {
@@ -328,6 +364,10 @@ analystsRouter.patch("/:id", async (req, res, next) => {
       data.photo = photo;
     }
 
+    const desligamento = parseDateValue(body.data_desligamento);
+    if (desligamento.error) { res.status(400).json({ error: desligamento.error }); return; }
+    if (desligamento.date !== undefined) data.data_desligamento = desligamento.date;
+
     if (Object.keys(data).length === 0) {
       res.status(400).json({ error: "Nada para atualizar" });
       return;
@@ -341,14 +381,209 @@ analystsRouter.patch("/:id", async (req, res, next) => {
   }
 });
 
+analystsRouter.get("/:id/absences", async (req, res, next) => {
+  try {
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
+    if (!(await prisma.analyst.findUnique({ where: { id: analystId } }))) {
+      throw new AnalystNotFoundError(analystId);
+    }
+    const absences = await prisma.analystAbsence.findMany({
+      where: { analystId },
+      orderBy: [{ data_hora_inicio: "asc" }, { id: "asc" }],
+    });
+    res.json(absences);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** Aceita uma data/hora ISO (ex.: "2026-09-25T14:00:00") e retorna um Date válido. */
+function parseAbsenceDateTime(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** `dia_inteiro` aceito como boolean (ou "true"/"false"/1/0); padrão true. */
+function parseAbsenceDayBoolean(value: unknown): boolean {
+  return value === true || value === 1 || value === "1" || value === "true";
+}
+
+/**
+ * Valida e extrai o payload de uma ausência/licença vindo do body.
+ * Regras: tipo obrigatório; fim estritamente maior que início; descrição opcional.
+ */
+function parseAbsencePayload(
+  body: Record<string, unknown>
+):
+  | { error: string }
+  | {
+      fields: {
+        tipo: AbsenceType;
+        dia_inteiro: boolean;
+        data_hora_inicio: Date;
+        data_hora_fim: Date;
+        descricao: string | null;
+      };
+    } {
+  const tipoRaw = body.tipo;
+  if (typeof tipoRaw !== "string" || !ABSENCE_TYPES.includes(tipoRaw as AbsenceType)) {
+    return { error: "tipo inválido (use FERIAS, FOLGA, ATESTADO ou OUTRO)" };
+  }
+  const diaInteiro = body.dia_inteiro === undefined ? true : parseAbsenceDayBoolean(body.dia_inteiro);
+  const inicio = parseAbsenceDateTime(body.data_hora_inicio);
+  if (!inicio) {
+    return { error: "data_hora_inicio inválida (use uma data/hora ISO, ex.: 2026-09-25T14:00:00)" };
+  }
+  const fim = parseAbsenceDateTime(body.data_hora_fim);
+  if (!fim) {
+    return { error: "data_hora_fim inválida (use uma data/hora ISO, ex.: 2026-09-25T16:30:00)" };
+  }
+  if (fim.getTime() <= inicio.getTime()) {
+    return { error: "data_hora_fim deve ser estritamente maior que data_hora_inicio" };
+  }
+  let descricao: string | null = null;
+  if (body.descricao !== undefined && body.descricao !== null && body.descricao !== "") {
+    if (typeof body.descricao !== "string") return { error: "descricao inválida" };
+    const trimmed = body.descricao.trim();
+    if (trimmed.length > MAX_DESCRICAO) {
+      return { error: `descricao deve ter no máximo ${MAX_DESCRICAO} caracteres` };
+    }
+    descricao = trimmed;
+  }
+  return {
+    fields: {
+      tipo: tipoRaw as AbsenceType,
+      dia_inteiro: diaInteiro,
+      data_hora_inicio: inicio,
+      data_hora_fim: fim,
+      descricao,
+    },
+  };
+}
+
+/**
+ * Monta a resposta de sobreposição: mensagem amigável + período estruturado
+ * (`conflict`) para o front destacar os registros conflitantes na lista.
+ * Para "dia inteiro" exibe só as datas; para parcial, datas e horas.
+ */
+function overlapResponse(overlap: {
+  dia_inteiro: boolean;
+  data_hora_inicio: Date;
+  data_hora_fim: Date;
+}): { error: string; conflict: { data_hora_inicio: Date; data_hora_fim: Date } } {
+  const error = overlap.dia_inteiro
+    ? `Já existe uma ausência ou férias cadastrada entre ${fmtLocalDate(overlap.data_hora_inicio)} e ${fmtLocalDate(overlap.data_hora_fim)}`
+    : `Já existe uma ausência ou férias cadastrada entre ${fmtBrazilDateTime(overlap.data_hora_inicio)} e ${fmtBrazilDateTime(overlap.data_hora_fim)}`;
+  return {
+    error,
+    conflict: { data_hora_inicio: overlap.data_hora_inicio, data_hora_fim: overlap.data_hora_fim },
+  };
+}
+
+analystsRouter.post("/:id/absences", async (req, res, next) => {
+  try {
+    const analystId = parseId(req.params.id);
+    if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
+    if (!(await prisma.analyst.findUnique({ where: { id: analystId } }))) {
+      throw new AnalystNotFoundError(analystId);
+    }
+    const parsed = parseAbsencePayload(req.body ?? {});
+    if ("error" in parsed) { res.status(400).json({ error: parsed.error }); return; }
+
+    const overlap = await prisma.analystAbsence.findFirst({
+      where: {
+        analystId,
+        data_hora_inicio: { lt: parsed.fields.data_hora_fim },
+        data_hora_fim: { gt: parsed.fields.data_hora_inicio },
+      },
+    });
+    if (overlap) {
+      res.status(409).json(overlapResponse(overlap));
+      return;
+    }
+
+    const absence = await prisma.analystAbsence.create({
+      data: { analystId, ...parsed.fields },
+    });
+    res.status(201).json(absence);
+  } catch (error) {
+    next(error);
+  }
+});
+
+analystsRouter.patch("/:id/absences/:absenceId", async (req, res, next) => {
+  try {
+    const analystId = parseId(req.params.id);
+    const absenceId = parseId(req.params.absenceId);
+    if (!analystId || !absenceId) { res.status(400).json({ error: "ID inválido" }); return; }
+    const existing = await prisma.analystAbsence.findUnique({ where: { id: absenceId } });
+    if (!existing || existing.analystId !== analystId) {
+      res.status(404).json({ error: "Ausência não encontrada" });
+      return;
+    }
+    const parsed = parseAbsencePayload(req.body ?? {});
+    if ("error" in parsed) { res.status(400).json({ error: parsed.error }); return; }
+
+    const overlap = await prisma.analystAbsence.findFirst({
+      where: {
+        analystId,
+        id: { not: absenceId },
+        data_hora_inicio: { lt: parsed.fields.data_hora_fim },
+        data_hora_fim: { gt: parsed.fields.data_hora_inicio },
+      },
+    });
+    if (overlap) {
+      res.status(409).json(overlapResponse(overlap));
+      return;
+    }
+
+    const absence = await prisma.analystAbsence.update({
+      where: { id: absenceId },
+      data: parsed.fields,
+    });
+    res.json(absence);
+  } catch (error) {
+    next(error);
+  }
+});
+
+analystsRouter.delete("/:id/absences/:absenceId", async (req, res, next) => {
+  try {
+    const analystId = parseId(req.params.id);
+    const absenceId = parseId(req.params.absenceId);
+    if (!analystId || !absenceId) { res.status(400).json({ error: "ID inválido" }); return; }
+    const existing = await prisma.analystAbsence.findUnique({ where: { id: absenceId } });
+    if (!existing || existing.analystId !== analystId) {
+      res.status(404).json({ error: "Ausência não encontrada" });
+      return;
+    }
+    await prisma.analystAbsence.delete({ where: { id: absenceId } });
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
 analystsRouter.delete("/:id", async (req, res, next) => {
   try {
     const analystId = parseId(req.params.id);
     if (!analystId) { res.status(400).json({ error: "ID inválido" }); return; }
     const existing = await prisma.analyst.findUnique({ where: { id: analystId } });
     if (!existing) { res.status(404).json({ error: "Analista não encontrado" }); return; }
+    const affected = await prisma.ticket.findMany({
+      where: { OR: [{ analystId }, { assignees: { some: { id: analystId } } }] },
+      select: { assignees: { select: { id: true } } },
+    });
     await prisma.ticket.updateMany({ where: { analystId }, data: { analystId: null } });
+    // As linhas de `_TicketAssignees` do analista são removidas em cascata
     await prisma.analyst.delete({ where: { id: analystId } });
+    const remaining = new Set<number>();
+    for (const t of affected) {
+      for (const a of t.assignees) if (a.id !== analystId) remaining.add(a.id);
+    }
+    await recalcAnalysts([...remaining]);
     res.status(204).end();
   } catch (error) {
     next(error);
@@ -384,13 +619,14 @@ analystsRouter.post("/:id/reorder", async (req, res, next) => {
     }
     const tickets = await prisma.ticket.findMany({
       where: { id: { in: order } },
-      select: { id: true, analystId: true },
+      select: { id: true, assignees: { select: { id: true } } },
     });
     if (tickets.length !== order.length) {
       res.status(400).json({ error: "Um ou mais chamados da ordem não existem" });
       return;
     }
-    if (tickets.some((t) => t.analystId !== analystId)) {
+    // A ordem só pode incluir chamados que tenham este analista na fila (m2m)
+    if (tickets.some((t) => !t.assignees.some((a) => a.id === analystId))) {
       res.status(400).json({ error: "A ordem só pode incluir chamados deste analista" });
       return;
     }
