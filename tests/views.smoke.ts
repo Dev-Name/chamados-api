@@ -132,7 +132,7 @@ async function main() {
     catMenu.click();
     const cOpen = await waitFor(() => doc.getElementById("categoriesModal").classList.contains("open"));
     check("menu Categorias abre a listagem", cOpen);
-    const catRows = doc.querySelectorAll("#categoriesList .cat-row");
+    const catRows = doc.querySelectorAll("#categoriesList .an-row");
     check("listagem renderiza categorias", catRows.length > 0, catRows.length + " categorias");
     check(
       "cada categoria tem badge de cor",

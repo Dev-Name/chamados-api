@@ -1090,19 +1090,13 @@ html[data-theme="dark"] .yb-over { color: #f87171; }
 
 /* Listagem de categorias (espelha a listagem de analistas/chamados) */
 #categoriesModal .modal { max-width: 620px; }
-.cat-row {
-  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px;
-  padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
-}
-.cat-row.inact { opacity: .62; }
+.an-row.inact { opacity: .62; }
 .cat-flag {
-  width: 14px; height: 14px; border-radius: 50%; flex: none;
+  display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+  margin-right: 7px; vertical-align: -1px; flex: none;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12);
 }
-.cat-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-count { color: var(--muted); font-size: var(--fs-md); white-space: nowrap; }
-.cat-actions { display: flex; align-items: center; gap: 7px; }
-.cat-actions .ghost.sm { padding: 4px 10px; font-size: var(--fs-md); }
 
 /* Listagem de chamados (espelha a listagem de analistas) */
 #ticketsModal .modal { max-width: 680px; }
