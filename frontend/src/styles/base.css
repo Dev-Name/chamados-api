@@ -325,7 +325,7 @@ body.side-min main { margin-left: 60px; }
   background: var(--hover-strong); border-color: var(--hover-border); color: var(--text);
   box-shadow: inset 0 0 0 1px var(--border), var(--ui-shadow);
 }
-.util-menu button[aria-pressed="true"] svg { color: var(--primary); }
+.util-menu button[aria-pressed="true"] svg { color: var(--muted); }
 .util-menu button .bi { width: 16px; height: 16px; flex: none; }
 
 /* Camada 3: Filtros (barra coesa — selects à esquerda, busca elástica à direita) */
