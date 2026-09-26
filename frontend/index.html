@@ -80,6 +80,22 @@
     <!-- CAMADA 2: Toolbar unificada -->
     <div class="toolbar">
       <div class="toolbar-left">
+        <div class="custom-select" id="viewSelectWrap" title="Mudar de vista">
+          <button id="viewSelect" aria-haspopup="listbox" aria-expanded="false">
+            <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            <span id="viewSelectLabel">Visão: Semana</span>
+            <svg class="bi cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="cs-menu" id="viewSelectMenu" role="listbox">
+            <div class="cs-option" data-view="day" role="option" tabindex="0">Dia</div>
+            <div class="cs-option" data-view="week" role="option" selected tabindex="0">Semana</div>
+            <div class="cs-option" data-view="month" role="option" tabindex="0">Mês</div>
+            <div class="cs-option" data-view="year" role="option" tabindex="0">Ano</div>
+            <div class="cs-option" data-view="kanban" role="option" tabindex="0">Quadro</div>
+            <div class="cs-option" data-view="load" role="option" tabindex="0">Carga</div>
+            <div class="cs-option" data-view="gantt" role="option" tabindex="0">Gantt</div>
+          </div>
+        </div>
         <div class="seg" id="viewSwitch" role="tablist">
           <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
           <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>

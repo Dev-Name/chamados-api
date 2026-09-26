@@ -237,7 +237,7 @@
   .top-card { flex-wrap: wrap; row-gap: 4px; max-height: none; padding: 6px 10px; }
   .toolbar { padding: 6px 8px; }
 
-  #filterToggle, #menuSummary, .util-btn, .cs-trigger,
+  #filterToggle, #menuSummary, #viewSelect, .util-btn, .cs-trigger,
   .nav-ctrl button, .tb-filters select, .tb-filters #f-q, .tb-filters #f-clear,
   #ticketsModal .t-filterbar select, #ticketsModal .t-filterbar input[type="search"],
   #ticketsModal .t-filterbar .ghost.sm,

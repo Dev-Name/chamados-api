@@ -1,4 +1,6 @@
 import { savePrefs, store, emit } from "../core/state";
+import type { ViewId } from "../core/state";
+import { setView } from "../core/nav";
 
 let toastTimer = 0;
 
@@ -89,10 +91,17 @@ function closeDensityMenu(): void {
   if (trig) trig.setAttribute("aria-expanded", "false");
 }
 
+let closeViewSelectImpl: (() => void) | null = null;
+
+export function closeViewSelect(): void {
+  closeViewSelectImpl?.();
+}
+
 /** Fecha qualquer camada flutuante portalizada (menus de analista e densidade). */
 export function closeFloats(): void {
   closeBandMenus();
   closeDensityMenu();
+  closeViewSelect();
 }
 
 export function toggleBandMenu(id: number | string, btn: HTMLElement): void {
@@ -277,8 +286,70 @@ export function wireChrome(): void {
     }
   });
 
+  /* dropdown de vistas (ecrãs pequenos): mesmo padrão do seletor de densidade */
+  const viewTrig = document.getElementById("viewSelect");
+  const viewMenu = document.getElementById("viewSelectMenu");
+  const viewOpts = () => Array.from(document.querySelectorAll<HTMLElement>("#viewSelectMenu .cs-option"));
+  closeViewSelectImpl = () => {
+    if (viewMenu) {
+      viewMenu.classList.remove("open");
+      unportalFloat(viewMenu);
+    }
+    if (viewTrig) viewTrig.setAttribute("aria-expanded", "false");
+  };
+  viewTrig?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = viewMenu?.classList.contains("open") ?? false;
+    closeViewSelect();
+    document.getElementById("utilMenu")?.classList.remove("open");
+    document.getElementById("utilMenuWrap")?.classList.remove("open");
+    if (!isOpen && viewMenu && viewTrig) {
+      viewMenu.classList.add("open");
+      viewTrig.setAttribute("aria-expanded", "true");
+      portalFloat(viewMenu, viewTrig);
+    }
+  });
+  viewMenu?.addEventListener("click", (e) => {
+    const opt = (e.target as HTMLElement).closest<HTMLElement>(".cs-option");
+    if (!opt) return;
+    const v = opt.dataset.view as ViewId | undefined;
+    if (v) setView(v);
+    closeViewSelect();
+    viewTrig?.focus();
+  });
+  viewTrig?.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if ((viewTrig.getAttribute("aria-expanded") ?? "false") !== "true") viewTrig.click();
+      requestAnimationFrame(() => {
+        const cur = viewOpts().find((o) => o.dataset.view === store.view) || viewOpts()[0];
+        cur?.focus();
+      });
+    }
+  });
+  viewMenu?.addEventListener("keydown", (e) => {
+    const list = viewOpts();
+    const i = list.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      list[(i + 1 + list.length) % list.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      list[(i - 1 + list.length) % list.length]?.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      (document.activeElement as HTMLElement | null)?.click();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      closeViewSelect();
+      viewTrig?.focus();
+    }
+  });
+
   document.addEventListener("click", () => {
     closeDensityMenu();
+    closeViewSelect();
   });
 
   document.getElementById("helpClose")?.addEventListener("click", () => closeHelp());

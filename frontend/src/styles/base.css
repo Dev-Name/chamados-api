@@ -168,7 +168,7 @@ button.sm { padding: 5px 9px; font-size: var(--fs-md); }
    --------------------------------------------------------------------------- */
 select, input:not([type]), input[type="search"], input[type="text"], input[type="number"],
 input[type="time"], input[type="date"], input[type="datetime-local"],
-.toolbar-select, .util-btn, #filterToggle, #menuSummary, .cs-trigger,
+.toolbar-select, .util-btn, #filterToggle, #menuSummary, #viewSelect, .cs-trigger,
 .util-menu button, .cs-field-trigger, .btn.subtle,
 .tb-filters select, .tb-filters #f-q, .tb-filters #f-clear,
 #ticketsModal .t-filterbar select, #ticketsModal .t-filterbar input[type="search"],
@@ -186,15 +186,16 @@ input[type="time"], input[type="date"], input[type="datetime-local"],
   font-family: inherit;
   font-size: var(--fs-md);
 }
-.toolbar-select, .util-btn, #filterToggle, #menuSummary, .cs-trigger,
+.toolbar-select, .util-btn, #filterToggle, #menuSummary, #viewSelect, .cs-trigger,
 .util-menu button, .cs-field-trigger, .btn.subtle,
 .tb-filters select, .tb-filters #f-clear,
 #ticketsModal .t-filterbar select { font-weight: 500; }
-select, .toolbar-select, .util-btn, #filterToggle, #menuSummary, .cs-trigger,
+select, .toolbar-select, .util-btn, #filterToggle, #menuSummary, #viewSelect, .cs-trigger,
 .util-menu button, .cs-field-trigger, .btn.subtle,
 .tb-filters select, .tb-filters #f-clear,
 #ticketsModal .t-filterbar select, #ticketModal .ana-combo-trigger { cursor: pointer; }
 .toolbar-select:focus, .util-btn:focus, #filterToggle:focus, #menuSummary:focus,
+#viewSelect:focus,
 .cs-trigger:focus, .util-menu button:focus, .cs-field-trigger:focus, .btn.subtle:focus,
 .tb-filters select:focus, .tb-filters #f-q:focus, .tb-filters #f-clear:focus,
 #ticketsModal .t-filterbar select:focus, #ticketsModal .t-filterbar input[type="search"]:focus,
@@ -213,6 +214,15 @@ select:focus, input:focus {
 .seg button .bi { width: 16px; height: 16px; flex: none; }
 .seg button:hover { background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }
 .seg button.active { background: var(--panel); color: var(--text); border-color: var(--border); box-shadow: var(--ui-shadow); }
+
+/* Seletor de vistas: pills no desktop (>= lg), dropdown com posição absoluta
+   nos ecrãs menores — nunca empurra a barra nem a grelha ao abrir. */
+#viewSwitch { display: none; }
+#viewSelectWrap { display: inline-flex; }
+@media (min-width: 1024px) {
+  #viewSwitch { display: inline-flex; }
+  #viewSelectWrap { display: none; }
+}
 
 main { margin-left: 236px; padding: 14px 20px 70px; transition: margin-left .18s ease; overflow-x: hidden; }
 body.side-min main { margin-left: 60px; }
@@ -275,16 +285,16 @@ body.side-min main { margin-left: 60px; }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .util-btn:hover { background: var(--hover-strong); border-color: var(--hover-border); }
-#filterToggle, #menuSummary, #weekendToggle, #menuLegend, #helpBtn {
+#filterToggle, #menuSummary, #weekendToggle, #menuLegend, #helpBtn, #viewSelect {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   flex: 0 0 auto;
 }
 #filterToggle:hover, #menuSummary:hover,
-#weekendToggle:hover, #menuLegend:hover, #helpBtn:hover {
+#weekendToggle:hover, #menuLegend:hover, #helpBtn:hover, #viewSelect:hover {
   background: var(--hover-strong); border-color: var(--hover-border);
 }
 #filterToggle.active, #filterToggle[aria-expanded="true"], #menuSummary.on,
-#weekendToggle.on, #weekendToggle[aria-pressed="true"] {
+#weekendToggle.on, #weekendToggle[aria-pressed="true"], #viewSelect[aria-expanded="true"] {
   background: var(--hover-strong); border-color: var(--hover-border); color: var(--text);
   box-shadow: inset 0 0 0 1px var(--border), var(--ui-shadow);
 }

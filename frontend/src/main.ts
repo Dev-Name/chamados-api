@@ -12,7 +12,7 @@ import { renderGrid, wireGridView, cancelDrag, closeMonthPop } from "./views/gri
 import { renderKanban, wireKanbanClick } from "./views/kanban";
 import { renderLoad } from "./views/load";
 import { renderGantt } from "./views/gantt";
-import { applyUiPrefs, wireChrome, showToast, closeAllModals, closeFloats, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
+import { applyUiPrefs, wireChrome, showToast, closeAllModals, closeFloats, closeViewSelect, syncWeekendUI, toggleHelp, closeHelp, closeLegend } from "./ui/chrome";
 import { wireResponsive, updateFilterCount } from "./ui/responsive";
 import { wireTicketModal } from "./ui/modals-ticket";
 import { wireTicketsModal } from "./ui/modals-tickets";
@@ -68,6 +68,21 @@ function setActiveViewTabs(): void {
   document.querySelectorAll<HTMLElement>("#viewSwitch [data-view]").forEach((b) => {
     b.classList.toggle("active", b.dataset.view === store.view);
   });
+  const VIEW_LABELS: Record<string, string> = {
+    day: "Dia",
+    week: "Semana",
+    month: "Mês",
+    year: "Ano",
+    kanban: "Quadro",
+    load: "Carga",
+    gantt: "Gantt",
+  };
+  const lbl = document.getElementById("viewSelectLabel");
+  if (lbl) lbl.textContent = "Visão: " + (VIEW_LABELS[store.view] || store.view);
+  document.querySelectorAll<HTMLElement>("#viewSelectMenu .cs-option").forEach((o) => {
+    o.toggleAttribute("selected", o.dataset.view === store.view);
+  });
+  closeViewSelect();
 }
 
 function paint(): void {
