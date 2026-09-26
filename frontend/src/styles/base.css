@@ -1032,7 +1032,7 @@ html[data-theme="dark"] .yb-over { color: #f87171; }
 }
 .cs-field-caret { width: 14px; height: 14px; flex: none; color: var(--muted); display: inline-flex; }
 .cs-field-menu {
-  display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: var(--z-pop);
+  display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 1000;
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--ui-r);
   box-shadow: var(--shadow); padding: 4px; max-height: 240px; overflow-y: auto;
 }
@@ -1090,6 +1090,10 @@ html[data-theme="dark"] .yb-over { color: #f87171; }
 
 /* Listagem de categorias (espelha a listagem de analistas/chamados) */
 #categoriesModal .modal { max-width: 620px; }
+/* Dropdown de cores flutua sem cortar nem criar scrollbar no formulário curto */
+#categoryModal .modal-body { overflow: visible; }
+#categoryModal .modal-head { display: flex; align-items: center; justify-content: space-between; }
+#categoryModal .modal-close { display: inline-flex; align-items: center; justify-content: center; }
 .an-row.inact { opacity: .62; }
 .cat-flag {
   display: inline-block; width: 12px; height: 12px; border-radius: 50%;
