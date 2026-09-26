@@ -217,25 +217,36 @@ select:focus, input:focus {
 
 /* Seletor de vistas: pills no desktop (>= lg), dropdown com posição absoluta
    nos ecrãs menores — nunca empurra a barra nem a grelha ao abrir. */
-/* Utilidades responsivas do seletor de vistas (equivalente a `hidden lg:flex` / `flex lg:hidden`) */
+/* Utilidades de visibilidade (equivalente a `hidden lg:flex` / `block lg:hidden`) */
 .hidden { display: none; }
+.block { display: block; }
 .flex { display: flex; }
 @media (min-width: 1024px) {
   .lg\:flex { display: flex; }
   .lg\:hidden { display: none; }
 }
-#viewSwitch {
-  display: none;
-  overflow: visible;
-  max-width: none;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+/* Seletor de vistas: grupo de botões só no desktop, <select> só em mobile/tablet. */
+.view-pills {
+  display: none; align-items: center; gap: 3px;
+  background: var(--seg-bg); border: 1px solid var(--border);
+  border-radius: var(--ui-r); padding: 1px; flex: none;
 }
-#viewSwitch::-webkit-scrollbar { display: none; }
-#viewSelectWrap { display: inline-flex; }
+.view-pills button {
+  border: 1px solid transparent; background: transparent; padding: 0 12px;
+  border-radius: var(--ui-r); font-weight: 600; font-size: 12.5px; color: var(--muted);
+  cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;
+  height: var(--ui-h); box-sizing: border-box; flex: none;
+}
+.view-pills button:hover { background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }
+.view-pills button.active { background: var(--panel); color: var(--text); border-color: var(--border); box-shadow: var(--ui-shadow); }
+.view-select { display: none; align-items: center; gap: 6px; flex: none; }
+.view-cap { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 @media (min-width: 1024px) {
   #viewSwitch { display: flex; }
-  #viewSelectWrap { display: none; }
+}
+@media (max-width: 1023.5px) {
+  #viewSelectWrap { display: flex; }
 }
 
 main { margin-left: 236px; padding: 14px 20px 70px; transition: margin-left .18s ease; overflow-x: hidden; }
@@ -576,7 +587,7 @@ html[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-in
   border-left: 3px solid var(--c);
   padding: var(--d-pad-card); overflow: hidden; cursor: grab; color: var(--text);
   width: 100%; flex: none;
-  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0;
   transition: opacity .25s, box-shadow .15s;
   animation: blkIn .35s ease both;
 }

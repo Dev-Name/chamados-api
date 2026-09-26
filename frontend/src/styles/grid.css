@@ -65,17 +65,11 @@
 }
 .band.daybody .daylabels > .band-label { position: static; border-right: 0; border-bottom: 1px solid var(--border); }
 
-/* célula de fluxo vertical (expediente de cima para baixo) */
+/* célula de fluxo vertical (expediente de cima para baixo) — altura em px, sem mínimo */
 .day.vtl {
-  position: relative; display: block; padding: 0; gap: 0; min-height: 56px; overflow: hidden;
+  position: relative; display: block; padding: 0; gap: 0; min-height: 0; overflow: hidden;
   border: 1px solid var(--border); border-left: none; border-bottom: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--panel) 96%, var(--border)) 0,
-    color-mix(in srgb, var(--panel) 96%, var(--border)) calc(var(--vtl-hour) - 1px),
-    transparent calc(var(--vtl-hour) - 1px),
-    transparent var(--vtl-hour)
-  );
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
 }
 .day.vtl + .day.vtl { border-top: 1px solid var(--border); }
 .day.vtl.todayCell { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--primary) 4%, transparent); }
@@ -87,11 +81,12 @@
 .day.vtl.idle .idle-label { background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 2px 8px; border-radius: 20px; }
 
 /* linhas de hora, faixa de almoço e "agora" no dia (horizontais, posições em %) */
-.day.vtl .vtl-off {
-  position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
+/* células horárias + "fora do expediente" (a classe `off` é injectada por célula) */
+.day.vtl .vtl-slot { position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0; }
+.day.vtl .vtl-slot.off, .day.dtcell .dt-slot.off {
   background:
-    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 16%, transparent) 5px 10px),
-    color-mix(in srgb, var(--text) 9%, transparent);
+    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 26%, transparent) 5px 10px),
+    color-mix(in srgb, var(--text) 12%, transparent);
 }
 .day.vtl .blk { z-index: 1; }
 .day.vtl .vtl-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
@@ -115,9 +110,9 @@
   border-radius: 50%; background: #0ea5e9;
 }
 
-/* blocos do dia: cartões posicionados por horário (colunas quando sobrepõem) */
+/* blocos do dia: cartões posicionados em px (colunas quando sobrepõem) */
 .day.vtl .blk {
-  position: absolute; margin: 0; min-width: 0; overflow: hidden;
+  position: absolute; margin: 0; min-width: 0; min-height: 0; overflow: hidden;
   display: flex; flex-direction: column; gap: 2px; padding: 3px 6px;
 }
 .day.vtl .blk.vblk { border-radius: 8px; }
@@ -132,12 +127,7 @@
   padding: 0; overflow: hidden;
 }
 .day.dtcell .dt { position: absolute; inset: 0; z-index: 0; }
-.day.dtcell .dt-off {
-  position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
-  background:
-    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 16%, transparent) 5px 10px),
-    color-mix(in srgb, var(--text) 9%, transparent);
-}
+.day.dtcell .dt-slot { position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0; }
 .day.dtcell .dt-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 70%, transparent); }
 .day.dtcell .dt-hlbl {
   position: absolute; left: 3px; transform: translateY(-50%); pointer-events: none;
@@ -152,9 +142,9 @@
 }
 .day.dtcell .dt-now { position: absolute; left: 0; right: 0; height: 2px; pointer-events: none; background: #0ea5e9; box-shadow: 0 0 0 1px rgba(14, 165, 233, .35); }
 
-/* mini-cartões da semana (colunas quando sobrepõem) */
+/* mini-cartões da semana: altura SEMPRE a inline (px) — nada estica verticalmente */
 .day.dtcell .blk {
-  position: absolute; margin: 0; min-width: 0; overflow: hidden; z-index: 1;
+  position: absolute; margin: 0; min-width: 0; min-height: 0; overflow: hidden; z-index: 1;
   display: flex; align-items: center;
   padding: 0 4px; border-left: 3px solid var(--prc);
   background: var(--panel); box-shadow: none;

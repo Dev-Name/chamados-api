@@ -113,9 +113,8 @@ function dtHtml(axis: TlRange, jornada: TlRange, lunch: { start: number; end: nu
     const hs = h * 60;
     const he = hs + 60;
     const top = p(hs);
-    if (he <= jornada.start || hs >= jornada.end) {
-      s += `<i class="dt-off" style="top:${top}%;height:${(+p(he) - +top).toFixed(2)}%"></i>`;
-    }
+    const foraDoExpediente = hs >= jornada.end || he <= jornada.start;
+    s += `<div class="dt-slot${foraDoExpediente ? " off" : ""}" style="top:${top}%;height:${(+p(he) - +top).toFixed(2)}%"></div>`;
     s += `<i class="dt-line" style="top:${top}%"></i><span class="dt-hlbl${h === hrs[0] ? " first" : ""}" style="top:${top}%">${h}</span>`;
   }
   if (axis.end % 60 === 0) {
@@ -141,9 +140,8 @@ function vtlDecorHtml(r: TlRange, global: TlRange, lunch: { start: number; end: 
     const hs = h * 60;
     const he = hs + 60;
     const topLine = pg(hs);
-    if (he <= r.start || hs >= r.end) {
-      off += `<i class="vtl-off" style="top:${topLine}%;height:${(+pg(he) - +topLine).toFixed(2)}%"></i>`;
-    }
+    const foraDoExpediente = hs >= r.end || he <= r.start;
+    off += `<div class="vtl-slot${foraDoExpediente ? " off" : ""}" style="top:${topLine}%;height:${(+pg(he) - +topLine).toFixed(2)}%"></div>`;
     marks += `<i class="vtl-line" style="top:${topLine}%"></i><span class="vtl-hlbl${h === hrs[0] ? " first" : ""}" style="top:${topLine}%">${h}</span>`;
   }
   if (lunch) marks += `<i class="vtl-lunch" style="top:${pg(lunch.start)}%;height:${(+pg(lunch.end) - +pg(lunch.start)).toFixed(2)}%"></i>`;
@@ -358,12 +356,12 @@ function placeBlock(cell: HTMLElement, t: Ticket, from: number, to: number): voi
   cell.appendChild(buildBlk(cell, t, from, to));
 }
 
-/* dia (régua vertical): cartão posicionado por horário; colunas quando sobrepõem. */
-function placeBlockV(cell: HTMLElement, t: Ticket, from: number, to: number, topPct: number, heightPct: number, col: number, cols: number): void {
+/* dia (régua vertical): cartão posicionado em px — altura = (horaFim - horaInicio) * alturaDaCelulaEmPx */
+function placeBlockV(cell: HTMLElement, t: Ticket, from: number, to: number, topPx: number, heightPx: number, col: number, cols: number): void {
   const blk = buildBlk(cell, t, from, to);
   blk.classList.add("vblk");
-  blk.style.top = topPct + "%";
-  blk.style.height = heightPct + "%";
+  blk.style.top = topPx + "px";
+  blk.style.height = heightPx + "px";
   blk.style.left = (col / cols) * 100 + "%";
   blk.style.width = 100 / cols + "%";
   cell.appendChild(blk);
@@ -506,32 +504,38 @@ function renderDayWeek(isDay: boolean): void {
       if (!r) continue;
       if (isDay) {
         const items = tlItems(a, d, r);
+        const alturaDaCelulaEmPx = DT_HOUR_PX;
         const span = dayRanges!.end - dayRanges!.start;
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const top = ((it.from - dayRanges!.start) / span) * 100;
-          const h = Math.max(((it.to - it.from) / span) * 100, 1.5);
-          placeBlockV(cell, it.t, it.from, it.to, top, h, tracks[i], cols);
+          const horaInicio = it.from / 60;
+          const horaFim = it.to / 60;
+          const alturaCartaoPx = (horaFim - horaInicio) * alturaDaCelulaEmPx;
+          const topPx = ((it.from - dayRanges!.start) / 60) * alturaDaCelulaEmPx;
+          placeBlockV(cell, it.t, it.from, it.to, topPx, alturaCartaoPx, tracks[i], cols);
         }
-        const hourPx = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--vtl-hour"), 10) || 64;
         const lanesBox = band.querySelector<HTMLElement>(".vtl-lanes");
-        if (lanesBox) lanesBox.style.height = Math.max((span / 60) * hourPx, 200) + "px";
+        if (lanesBox) {
+          /* cada faixa (linha do grid 1fr) tem de ter a altura de uma célula real:
+             (fimDoEixo - inicioDoEixo) / 60 * alturaDaCelulaEmPx */
+          const alturaDaFaixaPx = (span / 60) * DT_HOUR_PX;
+          lanesBox.style.height = alturaDaFaixaPx * ais.length + "px";
+        }
       } else {
         const axis = dayAxes.get(a.id)!;
         const items = tlItems(a, d, r);
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
-        const cellHeightInPx = DT_HOUR_PX;
+        const alturaDaCelulaEmPx = DT_HOUR_PX;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const startHour = it.from / 60;
-          const endHour = it.to / 60;
-          const duration = endHour - startHour;
-          const finalHeight = duration * cellHeightInPx;
-          const topPx = ((it.from - axis.start) / 60) * cellHeightInPx;
-          placeBlockDt(cell, it.t, it.from, it.to, topPx, finalHeight, tracks[i], cols);
+          const horaInicio = it.from / 60;
+          const horaFim = it.to / 60;
+          const alturaCartaoPx = (horaFim - horaInicio) * alturaDaCelulaEmPx;
+          const topPx = ((it.from - axis.start) / 60) * alturaDaCelulaEmPx;
+          placeBlockDt(cell, it.t, it.from, it.to, topPx, alturaCartaoPx, tracks[i], cols);
         }
       }
     }
