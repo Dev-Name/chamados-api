@@ -69,30 +69,32 @@ function dtHtml(r: TlRange, lunch: { start: number; end: number } | null, isToda
   return `<div class="dt">${s}</div>`;
 }
 
-/* dia: régua vertical única de horas (rótulos descendo à esquerda). */
-function vtlRulerHtml(r: TlRange): string {
-  const span = r.end - r.start;
-  const pos = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
-  return hoursInRange(r).map((h) => `<span class="vtl-h" style="top:${pos(h * 60)}%">${h}:00</span>`).join("");
-}
-
-/* dia: decoração da faixa vertical — máscara "fora do expediente" pela jornada do
-   analista naquele dia (nunca por fim de semana global), linhas de hora, almoço e "agora". */
+/* dia: decoração da faixa vertical — cada faixa (analista) tem o seu próprio eixo de
+   horas, definido em % da própria faixa (mesmo mapeamento dos blocos). A máscara
+   "fora do expediente" é aplicada por slot de hora: só quando aquela hora não está
+   contida na jornada do analista (nunca por fim de semana global). */
 function vtlDecorHtml(r: TlRange, global: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
   const gSpan = global.end - global.start;
   if (gSpan <= 0) return "";
   const pg = (m: number) => (((Math.max(global.start, Math.min(global.end, m)) - global.start) / gSpan) * 100).toFixed(2);
-  let s = "";
-  if (global.start < r.start) s += `<i class="vtl-off" style="top:0;height:${pg(r.start)}%"></i>`;
-  if (global.end > r.end) s += `<i class="vtl-off" style="top:${pg(r.end)}%;height:${(100 - +pg(r.end)).toFixed(2)}%"></i>`;
-  for (const h of hoursInRange(global)) s += `<i class="vtl-line" style="top:${pg(h * 60)}%"></i>`;
-  if (lunch) s += `<i class="vtl-lunch" style="top:${pg(lunch.start)}%;height:${(+pg(lunch.end) - +pg(lunch.start)).toFixed(2)}%"></i>`;
+  let off = "";
+  let marks = "";
+  for (const h of hoursInRange(global)) {
+    const hs = h * 60;
+    const he = hs + 60;
+    const topLine = pg(hs);
+    if (he <= r.start || hs >= r.end) {
+      off += `<i class="vtl-off" style="top:${topLine}%;height:${(+pg(he) - +topLine).toFixed(2)}%"></i>`;
+    }
+    marks += `<i class="vtl-line" style="top:${topLine}%"></i><span class="vtl-hlbl" style="top:${topLine}%">${h}</span>`;
+  }
+  if (lunch) marks += `<i class="vtl-lunch" style="top:${pg(lunch.start)}%;height:${(+pg(lunch.end) - +pg(lunch.start)).toFixed(2)}%"></i>`;
   if (isToday) {
     const n = new Date();
     const nowMin = n.getHours() * 60 + n.getMinutes();
-    if (nowMin >= global.start && nowMin <= global.end) s += `<i class="vtl-now" style="top:${pg(nowMin)}%"></i>`;
+    if (nowMin >= global.start && nowMin <= global.end) marks += `<i class="vtl-now" style="top:${pg(nowMin)}%"></i>`;
   }
-  return s;
+  return off + marks;
 }
 
 interface TlItem { t: Ticket; from: number; to: number; dur: number }
@@ -397,7 +399,7 @@ function renderDayWeek(isDay: boolean): void {
       const activeCount = a.tickets.filter((t) => t.status !== "COMPLETED").length;
       rows += bandLabelHtml(a, r && avail > 0 ? { activeCount, pct: Math.round((used / avail) * 100), dayTotal: used, avail } : null);
     }
-    rows += `</div><div class="daytl"><div class="vtl-ruler">${vtlRulerHtml(dayr)}</div><div class="vtl-lanes" style="--lanes:${ais.length}">`;
+    rows += `</div><div class="daytl"><div class="vtl-lanes" style="--lanes:${ais.length}">`;
     for (const a of ais) {
       const r = workRange(a, d.getDay());
       if (!r) {

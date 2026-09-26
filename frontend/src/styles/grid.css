@@ -51,22 +51,12 @@
 .dhead.dhead-date { justify-content: center; align-items: center; }
 .dhead.dhead-date .dd { gap: 8px; }
 
-/* corpo do dia = rail (labels dos analistas) + timeline vertical única */
+/* corpo do dia = rail (labels dos analistas) + faixas verticais por analista */
 .band.daybody { grid-template-columns: var(--rail) 1fr; }
-.daytl { position: relative; min-width: 0; padding-left: var(--vtl-ruler-w); }
+.daytl { position: relative; min-width: 0; }
 
-/* régua vertical única de horas (à esquerda, atravessa todas as faixas) */
-.vtl-ruler {
-  position: absolute; left: 0; top: 0; bottom: 0; width: var(--vtl-ruler-w);
-  border-right: 1px solid var(--border); z-index: 5; overflow: hidden;
-  background: color-mix(in srgb, var(--panel) 88%, var(--hover));
-}
-.vtl-ruler .vtl-h {
-  position: absolute; right: 7px; transform: translateY(-50%);
-  font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .2px; white-space: nowrap;
-}
-
-/* faixas por analista: uma linha da grade = um analista (alturas iguais) */
+/* faixas por analista: uma linha da grade = um analista (alturas iguais, cada uma
+   mapeando o dia inteiro — o eixo de horas vive dentro de cada faixa) */
 .vtl-lanes { display: grid; grid-template-rows: repeat(var(--lanes), 1fr); min-width: 0; }
 
 .band-label.daylabels {
@@ -103,6 +93,10 @@
 }
 .day.vtl .blk { z-index: 1; }
 .day.vtl .vtl-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
+.day.vtl .vtl-hlbl {
+  position: absolute; left: 3px; transform: translateY(-50%); pointer-events: none;
+  font-size: 9.5px; font-weight: 700; color: color-mix(in srgb, var(--muted) 75%, transparent); letter-spacing: .2px;
+}
 .day.vtl .vtl-lunch {
   position: absolute; left: 0; right: 0; pointer-events: none;
   background: color-mix(in srgb, var(--primary) 6%, transparent);
