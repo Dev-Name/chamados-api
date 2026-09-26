@@ -16,11 +16,15 @@ export function openModal(id: string): void {
 }
 
 export function closeModal(id: string): void {
-  document.getElementById(id)?.classList.remove("open");
+  const el = document.getElementById(id);
+  el?.classList.remove("open");
+  const active = document.activeElement as HTMLElement | null;
+  if (active && el && el.contains(active)) active.blur();
 }
 
 export function closeAllModals(): void {
   document.querySelectorAll(".modal-backdrop.open").forEach((m) => m.classList.remove("open"));
+  (document.activeElement as HTMLElement | null)?.blur();
 }
 
 /* ---------- camadas flutuantes portalizadas no <body> (root da aplicação)

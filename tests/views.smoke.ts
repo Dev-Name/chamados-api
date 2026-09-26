@@ -126,6 +126,52 @@ async function main() {
     check("existe menu Chamados", false);
   }
 
+  // ---- Categorias (menu + listagem + editor com cores) ----
+  const catMenu = doc.getElementById("categoriesMenu");
+  if (catMenu) {
+    catMenu.click();
+    const cOpen = await waitFor(() => doc.getElementById("categoriesModal").classList.contains("open"));
+    check("menu Categorias abre a listagem", cOpen);
+    const catRows = doc.querySelectorAll("#categoriesList .cat-row");
+    check("listagem renderiza categorias", catRows.length > 0, catRows.length + " categorias");
+    check(
+      "cada categoria tem badge de cor",
+      doc.querySelectorAll("#categoriesList .cat-flag[style*=background]").length === catRows.length
+    );
+    check(
+      "ações editar/excluir por categoria",
+      doc.querySelectorAll("#categoriesList [data-cat-edit]").length === catRows.length &&
+        doc.querySelectorAll("#categoriesList [data-cat-del]").length === catRows.length
+    );
+
+    const addBtn = doc.getElementById("cat-add") as HTMLElement | null;
+    addBtn?.click();
+    const addOpen = await waitFor(() => doc.getElementById("categoryModal").classList.contains("open"));
+    check("+ Nova categoria abre o editor", addOpen);
+    const colorOpts = doc.querySelectorAll<HTMLOptionElement>("#cat-color option[data-color]");
+    check("select de cores com bolinhas no item", colorOpts.length > 0, colorOpts.length + " cores");
+    check(
+      "bolinha visível no seletor",
+      doc.querySelectorAll("#categoryModal .cs-swatch").length > 0,
+      doc.querySelectorAll("#categoryModal .cs-swatch").length + " bolinhas"
+    );
+    (doc.querySelector('[data-close="categoryModal"]') as HTMLElement)?.click();
+    await sleep(100);
+
+    const firstEdit = doc.querySelector<HTMLElement>("#categoriesList [data-cat-edit]");
+    firstEdit?.click();
+    const editOpen = await waitFor(() => doc.getElementById("categoryModal").classList.contains("open"));
+    const nameInput = doc.getElementById("cat-name") as HTMLInputElement | null;
+    check("editar abre o modal e preenche o nome", editOpen && (nameInput?.value ?? "").length > 0, (nameInput?.value ?? "").slice(0, 40));
+    (doc.querySelector('[data-close="categoryModal"]') as HTMLElement)?.click();
+    await sleep(100);
+    (doc.querySelector('[data-close="categoriesModal"]') as HTMLElement)?.click();
+    await sleep(100);
+    check("modais de categorias fecham", !doc.getElementById("categoriesModal").classList.contains("open"));
+  } else {
+    check("existe menu Categorias", false);
+  }
+
   // volta para a semana para validar o filtro de analista nas bandas
   switchView("week");
   await waitFor(() => doc.querySelectorAll(".band").length >= 2);

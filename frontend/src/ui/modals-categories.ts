@@ -55,7 +55,9 @@ function openCategoryEditor(id: number | null): void {
   activeEl.checked = cat ? cat.ativo : true;
   fillColorSelect(cat?.cor ?? null);
   openModal("categoryModal");
-  window.setTimeout(() => nameEl.focus(), 0);
+  window.setTimeout(() => {
+    if (document.getElementById("categoryModal")?.classList.contains("open")) nameEl.focus();
+  }, 0);
 }
 
 async function saveCategory(): Promise<void> {
