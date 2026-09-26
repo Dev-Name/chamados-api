@@ -259,14 +259,15 @@ body.side-min main { margin-left: 60px; }
 /* Camada 2: Toolbar unificada */
 .toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  width: 100%; gap: 6px 14px;
+  width: 100%; min-width: 0; flex-wrap: nowrap;
+  gap: 6px 14px;
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);
   box-shadow: var(--shadow); padding: 8px 12px; margin-bottom: 6px;
 }
 .view-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex: none; }
 .bi { width: 16px; height: 16px; flex: none; }
-.toolbar-left { display: inline-flex; align-items: center; gap: 8px; }
-.toolbar-right { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+.toolbar-left { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; flex-wrap: nowrap; }
+.toolbar-right { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; justify-content: flex-end; }
 .toolbar-select { min-width: 175px; }
 .util-btn {
   width: var(--ui-h); padding: 0;
@@ -292,10 +293,10 @@ body.side-min main { margin-left: 60px; }
 .custom-select { position: relative; display: inline-flex; }
 .cs-trigger {
   display: inline-flex; align-items: center; gap: 6px;
-  white-space: nowrap; min-width: 175px;
+  white-space: nowrap; min-width: 175px; max-width: 100%;
 }
 .cs-trigger:hover { background: var(--hover-strong); border-color: var(--hover-border); }
-.cs-trigger .cs-label { flex: 1; text-align: left; }
+.cs-trigger .cs-label { flex: 1; text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cs-trigger .cs-arrow { width: 16px; height: 16px; flex: none; }
 .cs-menu {
   display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: var(--z-pop);
@@ -314,9 +315,10 @@ body.side-min main { margin-left: 60px; }
   display: inline-flex; align-items: center; flex-direction: row-reverse;
   width: var(--ui-h); overflow: hidden; white-space: nowrap;
   transition: width 0.35s ease; flex-shrink: 0;
+  min-width: 0;
 }
 .util-menu-wrap .util-btn { flex-shrink: 0; width: var(--ui-h); }
-.util-menu-wrap.open { width: 380px; }
+.util-menu-wrap.open { width: 380px; max-width: calc(100vw - 24px); }
 .util-menu {
   display: flex; align-items: center; gap: 6px;
   flex-shrink: 0;

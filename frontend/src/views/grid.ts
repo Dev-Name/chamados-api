@@ -54,6 +54,7 @@ function weekAxis(a: Analyst, days: Date[]): TlRange {
   }
   if (!Number.isFinite(start)) return { start: 0, end: 0 };
   if (start >= end) end = start + 60;
+  if (end < GRID_MIN_END) end = GRID_MIN_END;
   return { start, end };
 }
 
@@ -69,6 +70,7 @@ function unionAxis(axes: TlRange[]): TlRange {
 /* altura fixa de cada faixa de hora nas células da semana: o contentor cresce
    verticalmente com o eixo (maxHour - minHour), nunca comprimindo os rótulos. */
 const DT_HOUR_PX = 40;
+const GRID_MIN_END = 17 * 60;
 
 function dayCellHtml(a: Analyst, d: Date, isToday: boolean, axis: TlRange): string {
   if (capFor(a, d) <= 0) {
