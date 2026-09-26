@@ -62,6 +62,10 @@ function unionAxis(axes: TlRange[]): TlRange {
   };
 }
 
+/* altura fixa de cada faixa de hora nas células da semana: o contentor cresce
+   verticalmente com o eixo (maxHour - minHour), nunca comprimindo os rótulos. */
+const DT_HOUR_PX = 40;
+
 function dayCellHtml(a: Analyst, d: Date, isToday: boolean, axis: TlRange): string {
   if (capFor(a, d) <= 0) {
     return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
@@ -71,7 +75,8 @@ function dayCellHtml(a: Analyst, d: Date, isToday: boolean, axis: TlRange): stri
     return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
   const lunch = lunchForDow(a, d.getDay());
-  return `<div class="day dtcell${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${axis.start}" data-e="${axis.end}" title="Clique para criar um chamado neste dia">${dtHtml(axis, r, lunch, isToday)}</div>`;
+  const hPx = Math.max(1, Math.round(((axis.end - axis.start) / 60) * DT_HOUR_PX));
+  return `<div class="day dtcell${isToday ? " todayCell" : ""}" style="height:${hPx}px" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${axis.start}" data-e="${axis.end}" title="Clique para criar um chamado neste dia">${dtHtml(axis, r, lunch, isToday)}</div>`;
 }
 
 interface TlRange { start: number; end: number }
@@ -490,7 +495,7 @@ function renderDayWeek(isDay: boolean): void {
       const r = workRange(a, d.getDay());
       if (!r) continue;
       if (isDay) {
-        const items = tlItems(a, d, dayRanges!);
+        const items = tlItems(a, d, r);
         const span = dayRanges!.end - dayRanges!.start;
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
@@ -505,7 +510,7 @@ function renderDayWeek(isDay: boolean): void {
         if (lanesBox) lanesBox.style.height = Math.max((span / 60) * hourPx, 200) + "px";
       } else {
         const axis = dayAxes.get(a.id)!;
-        const items = tlItems(a, d, axis);
+        const items = tlItems(a, d, r);
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
         const span = axis.end - axis.start;

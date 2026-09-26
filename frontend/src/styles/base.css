@@ -222,10 +222,11 @@ body.side-min main { margin-left: 60px; }
 .summary { box-sizing: border-box; display: none; }
 .summary:not([hidden]) {
   display: inline-flex; align-items: center;
-  background: color-mix(in srgb, var(--panel) 92%, var(--border));
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 3px 12px;
+  padding: 4px 14px;
+  box-shadow: var(--ui-shadow);
   max-width: 100%;
   overflow: hidden;
 }
