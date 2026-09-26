@@ -30,7 +30,39 @@ function weekFilteredDays(): Date[] {
   return days;
 }
 
-function dayCellHtml(a: Analyst, d: Date, isToday: boolean): string {
+function weekAxis(a: Analyst, days: Date[]): TlRange {
+  let start = Infinity;
+  let end = -Infinity;
+  for (const d of days) {
+    const r = workRange(a, d.getDay());
+    if (r) {
+      if (r.start < start) start = r.start;
+      if (r.end > end) end = r.end;
+    }
+    for (const t of a.tickets) {
+      if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
+      for (const s of segmentsOfCached(t, a)) {
+        if (!sameDay(s.date, d)) continue;
+        if (s.from < start) start = s.from;
+        if (s.to > end) end = s.to;
+      }
+    }
+  }
+  if (!Number.isFinite(start)) return { start: 0, end: 0 };
+  if (start >= end) end = start + 60;
+  return { start, end };
+}
+
+function unionAxis(axes: TlRange[]): TlRange {
+  const rs = axes.filter((x) => x.end > x.start);
+  if (!rs.length) return { start: 0, end: 0 };
+  return {
+    start: Math.min(...rs.map((x) => x.start)),
+    end: Math.max(...rs.map((x) => x.end)),
+  };
+}
+
+function dayCellHtml(a: Analyst, d: Date, isToday: boolean, axis: TlRange): string {
   if (capFor(a, d) <= 0) {
     return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
@@ -39,7 +71,7 @@ function dayCellHtml(a: Analyst, d: Date, isToday: boolean): string {
     return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
   const lunch = lunchForDow(a, d.getDay());
-  return `<div class="day dtcell${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${r.start}" data-e="${r.end}" title="Clique para criar um chamado neste dia">${dtHtml(r, lunch, isToday)}</div>`;
+  return `<div class="day dtcell${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${axis.start}" data-e="${axis.end}" title="Clique para criar um chamado neste dia">${dtHtml(axis, r, lunch, isToday)}</div>`;
 }
 
 interface TlRange { start: number; end: number }
@@ -51,21 +83,34 @@ function hoursInRange(r: TlRange): number[] {
   return out;
 }
 
-/* semana: mini-régua vertical dentro de cada célula (dia × analista). */
-function dtHtml(r: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
-  const span = r.end - r.start;
-  const p = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
+/* semana: mini-régua vertical dentro de cada célula (dia × analista). O eixo vem
+   do período todo (weekAxis); a máscara "fora do expediente" é por slot de hora
+   fora da jornada daquele dia; uma linha/rótulo terminal marca o fim do eixo
+   quando ele cai em hora cheia. */
+function dtHtml(axis: TlRange, jornada: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
+  const span = axis.end - axis.start;
+  if (span <= 0) return "";
+  const p = (m: number) => (((Math.max(axis.start, Math.min(axis.end, m)) - axis.start) / span) * 100).toFixed(2);
   let nowMin = -1;
   if (isToday) {
     const n = new Date();
     nowMin = n.getHours() * 60 + n.getMinutes();
   }
   let s = "";
-  for (const h of hoursInRange(r)) {
-    s += `<i class="dt-line" style="top:${p(h * 60)}%"></i><span class="dt-hlbl" style="top:${p(h * 60)}%">${h}</span>`;
+  for (const h of hoursInRange(axis)) {
+    const hs = h * 60;
+    const he = hs + 60;
+    const top = p(hs);
+    if (he <= jornada.start || hs >= jornada.end) {
+      s += `<i class="dt-off" style="top:${top}%;height:${(+p(he) - +top).toFixed(2)}%"></i>`;
+    }
+    s += `<i class="dt-line" style="top:${top}%"></i><span class="dt-hlbl" style="top:${top}%">${h}</span>`;
+  }
+  if (axis.end % 60 === 0) {
+    s += `<i class="dt-line" style="top:${p(axis.end)}%"></i><span class="dt-hlbl" style="top:${p(axis.end)}%">${Math.floor(axis.end / 60)}</span>`;
   }
   if (lunch) s += `<i class="dt-lunch" style="top:${p(lunch.start)}%;height:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
-  if (nowMin >= r.start && nowMin <= r.end) s += `<i class="dt-now" style="top:${p(nowMin)}%"></i>`;
+  if (nowMin >= axis.start && nowMin <= axis.end) s += `<i class="dt-now" style="top:${p(nowMin)}%"></i>`;
   return `<div class="dt">${s}</div>`;
 }
 
@@ -89,6 +134,7 @@ function vtlDecorHtml(r: TlRange, global: TlRange, lunch: { start: number; end: 
     marks += `<i class="vtl-line" style="top:${topLine}%"></i><span class="vtl-hlbl" style="top:${topLine}%">${h}</span>`;
   }
   if (lunch) marks += `<i class="vtl-lunch" style="top:${pg(lunch.start)}%;height:${(+pg(lunch.end) - +pg(lunch.start)).toFixed(2)}%"></i>`;
+  if (global.end % 60 === 0) marks += `<i class="vtl-line" style="top:${pg(global.end)}%"></i><span class="vtl-hlbl" style="top:${pg(global.end)}%">${Math.floor(global.end / 60)}</span>`;
   if (isToday) {
     const n = new Date();
     const nowMin = n.getHours() * 60 + n.getMinutes();
@@ -345,6 +391,13 @@ function renderDayWeek(isDay: boolean): void {
     return;
   }
   const days = isDay ? [startOf(store.refDate)] : weekFilteredDays();
+  const dayAxes = new Map<number, TlRange>();
+  for (const a of ais) dayAxes.set(a.id, weekAxis(a, days));
+  const dayr: TlRange | null = isDay
+    ? unionAxis(
+        ais.map((a) => (workRange(a, days[0].getDay()) ? dayAxes.get(a.id)! : { start: 0, end: 0 }))
+      )
+    : null;
   const rail = "220px";
   const template = isDay ? `${rail} 1fr` : `${rail} repeat(${days.length}, minmax(140px, 1fr))`;
   const now = new Date();
@@ -383,13 +436,6 @@ function renderDayWeek(isDay: boolean): void {
   if (isDay) {
     const d = days[0];
     const isToday = sameDay(d, now);
-    const ranges = ais
-      .map((a) => workRange(a, d.getDay()))
-      .filter((x): x is TlRange => !!x);
-    const dayr: TlRange = {
-      start: ranges.length ? Math.min(...ranges.map((x) => x.start)) : 0,
-      end: ranges.length ? Math.max(...ranges.map((x) => x.end)) : 0,
-    };
     rows += `<div class="grid-row band daybody" style="grid-template-columns:${template}">
       <div class="band-label daylabels" style="--vtl-n:${ais.length}">`;
     for (const a of ais) {
@@ -406,7 +452,7 @@ function renderDayWeek(isDay: boolean): void {
         rows += `<div class="day vtl idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">fora do expediente</span></div>`;
         continue;
       }
-      rows += `<div class="day vtl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${dayr.start}" data-e="${dayr.end}" title="Clique para criar um chamado neste dia">${vtlDecorHtml(r, dayr, lunchForDow(a, d.getDay()), isToday)}</div>`;
+      rows += `<div class="day vtl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${dayr!.start}" data-e="${dayr!.end}" title="Clique para criar um chamado neste dia">${vtlDecorHtml(r, dayr!, lunchForDow(a, d.getDay()), isToday)}</div>`;
     }
     rows += `</div></div></div>`;
   } else {
@@ -423,25 +469,14 @@ function renderDayWeek(isDay: boolean): void {
       rows += `<div class="grid-row band" id="band-${a.id}" data-a="${a.id}" style="grid-template-columns:${template}">
         ${bandLabelHtml(a, usageAll ? { activeCount, pct, dayTotal, avail: usageAll.avail } : null)}`;
 
-      for (const d of days) rows += dayCellHtml(a, d, sameDay(d, now));
+      for (const d of days) rows += dayCellHtml(a, d, sameDay(d, now), dayAxes.get(a.id)!);
       rows += "</div>";
     }
   }
 
   calBody.innerHTML = head + rows;
 
-  const dayRanges = isDay
-    ? (() => {
-        const d = days[0];
-        const ranges = ais
-          .map((a) => workRange(a, d.getDay()))
-          .filter((x): x is TlRange => !!x);
-        return {
-          start: ranges.length ? Math.min(...ranges.map((x) => x.start)) : 0,
-          end: ranges.length ? Math.max(...ranges.map((x) => x.end)) : 0,
-        };
-      })()
-    : null;
+  const dayRanges = dayr;
 
   for (const a of ais) {
     const band = isDay
@@ -454,8 +489,8 @@ function renderDayWeek(isDay: boolean): void {
       if (!cell) continue;
       const r = workRange(a, d.getDay());
       if (!r) continue;
-      const items = tlItems(a, d, r);
       if (isDay) {
+        const items = tlItems(a, d, dayRanges!);
         const span = dayRanges!.end - dayRanges!.start;
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
@@ -469,12 +504,14 @@ function renderDayWeek(isDay: boolean): void {
         const lanesBox = band.querySelector<HTMLElement>(".vtl-lanes");
         if (lanesBox) lanesBox.style.height = Math.max((span / 60) * hourPx, 200) + "px";
       } else {
+        const axis = dayAxes.get(a.id)!;
+        const items = tlItems(a, d, axis);
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
-        const span = r.end - r.start;
+        const span = axis.end - axis.start;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const top = ((it.from - r.start) / span) * 100;
+          const top = ((it.from - axis.start) / span) * 100;
           placeBlockDt(cell, it.t, it.from, it.to, top, tracks[i], cols);
         }
       }

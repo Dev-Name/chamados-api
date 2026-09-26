@@ -127,7 +127,11 @@
   position: relative; display: block; min-height: var(--dt-min-h);
   padding: 0; overflow: hidden;
 }
-.day.dtcell .dt { position: absolute; inset: 0; }
+.day.dtcell .dt { position: absolute; inset: 0; z-index: 0; }
+.day.dtcell .dt-off {
+  position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(45deg, var(--out-bg) 0 5px, var(--track) 5px 10px);
+}
 .day.dtcell .dt-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 70%, transparent); }
 .day.dtcell .dt-hlbl {
   position: absolute; left: 3px; transform: translateY(-50%); pointer-events: none;
@@ -142,7 +146,7 @@
 
 /* mini-cartões da semana (colunas quando sobrepõem) */
 .day.dtcell .blk {
-  position: absolute; margin: 0; min-width: 0; overflow: hidden;
+  position: absolute; margin: 0; min-width: 0; overflow: hidden; z-index: 1;
   display: flex; align-items: center;
   padding: 0 4px; border-left: 3px solid var(--prc);
   background: var(--panel); box-shadow: none;
