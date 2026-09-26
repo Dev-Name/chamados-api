@@ -99,6 +99,8 @@
   position: absolute; left: 3px; transform: translateY(-50%); pointer-events: none;
   font-size: 9.5px; font-weight: 700; color: color-mix(in srgb, var(--muted) 75%, transparent); letter-spacing: .2px;
 }
+.day.vtl .vtl-hlbl.first { transform: translateY(25%); }
+.day.vtl .vtl-hlbl.last { transform: translateY(-125%); }
 .day.vtl .vtl-lunch {
   position: absolute; left: 0; right: 0; pointer-events: none;
   background: color-mix(in srgb, var(--primary) 6%, transparent);
@@ -141,6 +143,8 @@
   position: absolute; left: 3px; transform: translateY(-50%); pointer-events: none;
   font-size: 9.5px; font-weight: 700; color: color-mix(in srgb, var(--muted) 75%, transparent); letter-spacing: .2px;
 }
+.day.dtcell .dt-hlbl.first { transform: translateY(25%); }
+.day.dtcell .dt-hlbl.last { transform: translateY(-125%); }
 .day.dtcell .dt-lunch {
   position: absolute; left: 0; right: 0; pointer-events: none;
   background: color-mix(in srgb, var(--primary) 5%, transparent);

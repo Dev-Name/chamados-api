@@ -39,12 +39,16 @@ function weekAxis(a: Analyst, days: Date[]): TlRange {
       if (r.start < start) start = r.start;
       if (r.end > end) end = r.end;
     }
+    if (!r) continue;
     for (const t of a.tickets) {
       if (t.status === "COMPLETED" || !visibleTicket(t)) continue;
       for (const s of segmentsOfCached(t, a)) {
         if (!sameDay(s.date, d)) continue;
-        if (s.from < start) start = s.from;
-        if (s.to > end) end = s.to;
+        const fs = Math.max(s.from, r.start);
+        const te = Math.min(s.to, r.end);
+        if (te <= fs) continue;
+        if (fs < start) start = fs;
+        if (te > end) end = te;
       }
     }
   }
@@ -102,17 +106,18 @@ function dtHtml(axis: TlRange, jornada: TlRange, lunch: { start: number; end: nu
     nowMin = n.getHours() * 60 + n.getMinutes();
   }
   let s = "";
-  for (const h of hoursInRange(axis)) {
+  const hrs = hoursInRange(axis);
+  for (const h of hrs) {
     const hs = h * 60;
     const he = hs + 60;
     const top = p(hs);
     if (he <= jornada.start || hs >= jornada.end) {
       s += `<i class="dt-off" style="top:${top}%;height:${(+p(he) - +top).toFixed(2)}%"></i>`;
     }
-    s += `<i class="dt-line" style="top:${top}%"></i><span class="dt-hlbl" style="top:${top}%">${h}</span>`;
+    s += `<i class="dt-line" style="top:${top}%"></i><span class="dt-hlbl${h === hrs[0] ? " first" : ""}" style="top:${top}%">${h}</span>`;
   }
   if (axis.end % 60 === 0) {
-    s += `<i class="dt-line" style="top:${p(axis.end)}%"></i><span class="dt-hlbl" style="top:${p(axis.end)}%">${Math.floor(axis.end / 60)}</span>`;
+    s += `<i class="dt-line" style="top:${p(axis.end)}%"></i><span class="dt-hlbl last" style="top:${p(axis.end)}%">${Math.floor(axis.end / 60)}</span>`;
   }
   if (lunch) s += `<i class="dt-lunch" style="top:${p(lunch.start)}%;height:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
   if (nowMin >= axis.start && nowMin <= axis.end) s += `<i class="dt-now" style="top:${p(nowMin)}%"></i>`;
@@ -129,17 +134,18 @@ function vtlDecorHtml(r: TlRange, global: TlRange, lunch: { start: number; end: 
   const pg = (m: number) => (((Math.max(global.start, Math.min(global.end, m)) - global.start) / gSpan) * 100).toFixed(2);
   let off = "";
   let marks = "";
-  for (const h of hoursInRange(global)) {
+  const hrs = hoursInRange(global);
+  for (const h of hrs) {
     const hs = h * 60;
     const he = hs + 60;
     const topLine = pg(hs);
     if (he <= r.start || hs >= r.end) {
       off += `<i class="vtl-off" style="top:${topLine}%;height:${(+pg(he) - +topLine).toFixed(2)}%"></i>`;
     }
-    marks += `<i class="vtl-line" style="top:${topLine}%"></i><span class="vtl-hlbl" style="top:${topLine}%">${h}</span>`;
+    marks += `<i class="vtl-line" style="top:${topLine}%"></i><span class="vtl-hlbl${h === hrs[0] ? " first" : ""}" style="top:${topLine}%">${h}</span>`;
   }
   if (lunch) marks += `<i class="vtl-lunch" style="top:${pg(lunch.start)}%;height:${(+pg(lunch.end) - +pg(lunch.start)).toFixed(2)}%"></i>`;
-  if (global.end % 60 === 0) marks += `<i class="vtl-line" style="top:${pg(global.end)}%"></i><span class="vtl-hlbl" style="top:${pg(global.end)}%">${Math.floor(global.end / 60)}</span>`;
+  if (global.end % 60 === 0) marks += `<i class="vtl-line" style="top:${pg(global.end)}%"></i><span class="vtl-hlbl last" style="top:${pg(global.end)}%">${Math.floor(global.end / 60)}</span>`;
   if (isToday) {
     const n = new Date();
     const nowMin = n.getHours() * 60 + n.getMinutes();
