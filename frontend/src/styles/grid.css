@@ -90,8 +90,8 @@
 .day.vtl .vtl-off {
   position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
   background:
-    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 12%, transparent) 5px 10px),
-    color-mix(in srgb, var(--text) 7%, transparent);
+    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 16%, transparent) 5px 10px),
+    color-mix(in srgb, var(--text) 9%, transparent);
 }
 .day.vtl .blk { z-index: 1; }
 .day.vtl .vtl-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
@@ -128,15 +128,15 @@
 
 /* Semana: célula com mini-eixo vertical (expediente de cima para baixo) */
 .day.dtcell {
-  position: relative; display: block; min-height: var(--dt-min-h);
+  position: relative; display: block; min-height: 0;
   padding: 0; overflow: hidden;
 }
 .day.dtcell .dt { position: absolute; inset: 0; z-index: 0; }
 .day.dtcell .dt-off {
   position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
   background:
-    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 12%, transparent) 5px 10px),
-    color-mix(in srgb, var(--text) 7%, transparent);
+    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 16%, transparent) 5px 10px),
+    color-mix(in srgb, var(--text) 9%, transparent);
 }
 .day.dtcell .dt-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 70%, transparent); }
 .day.dtcell .dt-hlbl {

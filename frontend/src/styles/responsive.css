@@ -96,9 +96,9 @@
   }
   .seg::-webkit-scrollbar { display: none; }
   .seg button { flex: none; }
-  .toolbar { align-items: center; flex-wrap: nowrap; }
+  .toolbar { align-items: center; flex-wrap: wrap; }
   .toolbar-right { margin-left: auto; }
-  .cs-trigger { min-width: 0; flex: 0 1 auto; }
+  .cs-trigger { min-width: 150px; flex: 0 1 auto; }
   .cs-trigger .cs-label { max-width: 120px; }
   .top-card { padding: 6px 12px; }
   .period-title { min-width: 0; font-size: 15px; }
@@ -114,7 +114,8 @@
 /* Mobile (< md): oculta selects atrás do botão Filtros; mantém busca + botão */
 @media (max-width: 767.5px) {
   #filterToggle .flbl, #menuSummary > span,
-  .util-menu button > span:not(.udot) { display: none; }
+  .util-menu button > span:not(.udot),
+  .cs-trigger .cs-label { display: none; }
   .tb-filters #fSelects { display: none; }
   .tb-filters #f-q { flex: 1 1 100%; min-width: 100%; order: 1; }
   .tb-filters #f-clear { order: 2; }

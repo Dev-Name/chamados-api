@@ -81,7 +81,7 @@ function dayCellHtml(a: Analyst, d: Date, isToday: boolean, axis: TlRange): stri
     return `<div class="day idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">${esc(weekdays[(d.getDay() + 6) % 7])} — fora do expediente</span></div>`;
   }
   const lunch = lunchForDow(a, d.getDay());
-  const hPx = Math.max(1, Math.round(((axis.end - axis.start) / 60) * DT_HOUR_PX));
+  const hPx = Math.max(1, ((axis.end - axis.start) / 60) * DT_HOUR_PX);
   return `<div class="day dtcell${isToday ? " todayCell" : ""}" style="height:${hPx}px" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${axis.start}" data-e="${axis.end}" title="Clique para criar um chamado neste dia">${dtHtml(axis, r, lunch, isToday)}</div>`;
 }
 
@@ -526,9 +526,11 @@ function renderDayWeek(isDay: boolean): void {
         const cellHeight = DT_HOUR_PX;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const top = ((it.from - axis.start) / 60) * cellHeight;
-          const h = ((it.to - it.from) / 60) * cellHeight;
-          placeBlockDt(cell, it.t, it.from, it.to, top, h, tracks[i], cols);
+          const startMin = it.from;
+          const endMin = it.to;
+          const heightPx = ((endMin - startMin) / 60) * cellHeight;
+          const topPx = ((startMin - axis.start) / 60) * cellHeight;
+          placeBlockDt(cell, it.t, it.from, it.to, topPx, heightPx, tracks[i], cols);
         }
       }
     }

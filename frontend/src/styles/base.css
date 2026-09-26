@@ -207,8 +207,9 @@ select:focus, input:focus {
 .btn.subtle:hover { background: var(--hover-strong); border-color: var(--hover-border); }
 .btn.subtle.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
 .btn.subtle.primary:hover { background: #2f5ce0; }
-.seg { display: inline-flex; align-items: center; gap: 3px; background: var(--seg-bg); border: 1px solid var(--border); border-radius: var(--ui-r); padding: 1px; }
-.seg button { border: 1px solid transparent; background: transparent; padding: 0 12px; border-radius: var(--ui-r); font-weight: 600; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: var(--ui-h); box-sizing: border-box; }
+.seg { display: inline-flex; align-items: center; gap: 3px; background: var(--seg-bg); border: 1px solid var(--border); border-radius: var(--ui-r); padding: 1px; flex: none; white-space: nowrap; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; min-width: 0; max-width: 100%; }
+.seg::-webkit-scrollbar { display: none; }
+.seg button { border: 1px solid transparent; background: transparent; padding: 0 12px; border-radius: var(--ui-r); font-weight: 600; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: var(--ui-h); box-sizing: border-box; flex: none; }
 .seg button .bi { width: 16px; height: 16px; flex: none; }
 .seg button:hover { background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }
 .seg button.active { background: var(--panel); color: var(--text); border-color: var(--border); box-shadow: var(--ui-shadow); }
@@ -259,15 +260,15 @@ body.side-min main { margin-left: 60px; }
 /* Camada 2: Toolbar unificada */
 .toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  width: 100%; min-width: 0; flex-wrap: nowrap;
-  gap: 6px 14px;
+  width: 100%; min-width: 0; flex-wrap: wrap;
+  gap: 8px 14px;
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);
   box-shadow: var(--shadow); padding: 8px 12px; margin-bottom: 6px;
 }
 .view-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex: none; }
 .bi { width: 16px; height: 16px; flex: none; }
-.toolbar-left { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; flex-wrap: nowrap; }
-.toolbar-right { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; justify-content: flex-end; }
+.toolbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; }
+.toolbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
 .toolbar-select { min-width: 175px; }
 .util-btn {
   width: var(--ui-h); padding: 0;
@@ -276,6 +277,7 @@ body.side-min main { margin-left: 60px; }
 .util-btn:hover { background: var(--hover-strong); border-color: var(--hover-border); }
 #filterToggle, #menuSummary, #weekendToggle, #menuLegend, #helpBtn {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  flex: 0 0 auto;
 }
 #filterToggle:hover, #menuSummary:hover,
 #weekendToggle:hover, #menuLegend:hover, #helpBtn:hover {
@@ -290,7 +292,7 @@ body.side-min main { margin-left: 60px; }
   content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); flex: none;
 }
 .util-menu button .bi { width: 16px; height: 16px; flex: none; }
-.custom-select { position: relative; display: inline-flex; }
+.custom-select { position: relative; display: inline-flex; flex: 0 1 auto; min-width: 0; }
 .cs-trigger {
   display: inline-flex; align-items: center; gap: 6px;
   white-space: nowrap; min-width: 175px; max-width: 100%;
