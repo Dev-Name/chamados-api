@@ -76,17 +76,21 @@ function vtlRulerHtml(r: TlRange): string {
   return hoursInRange(r).map((h) => `<span class="vtl-h" style="top:${pos(h * 60)}%">${h}:00</span>`).join("");
 }
 
-/* dia: decoração da faixa vertical — linhas de hora, faixa de almoço e "agora". */
-function vtlDecorHtml(r: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
-  const span = r.end - r.start;
-  const p = (m: number) => (((Math.max(r.start, Math.min(r.end, m)) - r.start) / span) * 100).toFixed(2);
+/* dia: decoração da faixa vertical — máscara "fora do expediente" pela jornada do
+   analista naquele dia (nunca por fim de semana global), linhas de hora, almoço e "agora". */
+function vtlDecorHtml(r: TlRange, global: TlRange, lunch: { start: number; end: number } | null, isToday: boolean): string {
+  const gSpan = global.end - global.start;
+  if (gSpan <= 0) return "";
+  const pg = (m: number) => (((Math.max(global.start, Math.min(global.end, m)) - global.start) / gSpan) * 100).toFixed(2);
   let s = "";
-  for (const h of hoursInRange(r)) s += `<i class="vtl-line" style="top:${p(h * 60)}%"></i>`;
-  if (lunch) s += `<i class="vtl-lunch" style="top:${p(lunch.start)}%;height:${(+p(lunch.end) - +p(lunch.start)).toFixed(2)}%"></i>`;
+  if (global.start < r.start) s += `<i class="vtl-off" style="top:0;height:${pg(r.start)}%"></i>`;
+  if (global.end > r.end) s += `<i class="vtl-off" style="top:${pg(r.end)}%;height:${(100 - +pg(r.end)).toFixed(2)}%"></i>`;
+  for (const h of hoursInRange(global)) s += `<i class="vtl-line" style="top:${pg(h * 60)}%"></i>`;
+  if (lunch) s += `<i class="vtl-lunch" style="top:${pg(lunch.start)}%;height:${(+pg(lunch.end) - +pg(lunch.start)).toFixed(2)}%"></i>`;
   if (isToday) {
     const n = new Date();
     const nowMin = n.getHours() * 60 + n.getMinutes();
-    if (nowMin >= r.start && nowMin <= r.end) s += `<i class="vtl-now" style="top:${p(nowMin)}%"></i>`;
+    if (nowMin >= global.start && nowMin <= global.end) s += `<i class="vtl-now" style="top:${pg(nowMin)}%"></i>`;
   }
   return s;
 }
@@ -218,8 +222,19 @@ function buildBlk(cell: HTMLElement, t: Ticket, from: number, to: number): HTMLE
   const density = store.prefs.density;
   const owner = store.analysts.find((x) => x.id === Number(cell.dataset.a));
   const ownerName = owner ? getCleanName(owner.name) : "";
+  const alerts: string[] = [];
+  if (late) alerts.push("Alerta: prazo estourado");
+  const iso = cell.dataset.iso ? new Date(cell.dataset.iso) : null;
+  if (owner && iso) {
+    const rng = workRange(owner, iso.getDay());
+    if (rng && segmentsOfCached(t, owner).some((s) => sameDay(s.date, iso) && (s.from < rng.start || s.to > rng.end))) {
+      alerts.push("Alocado fora do expediente");
+    }
+  }
   const tooltip =
-    `#${t.id} ${t.title}\n${catName} • ${statusLabel[t.status] || t.status}${late ? " • Atrasado" : ""}\n` +
+    `#${t.id} ${t.title}\n` +
+    (alerts.length ? alerts.join("\n") + "\n" : "") +
+    `${catName} • ${statusLabel[t.status] || t.status}\n` +
     `${fmtNum(t.estimatedMinutes)} total${worked > 0 ? ` • ${fmtNum(worked)} trabalhado (${pct}%)` : ""}\n` +
     `${fmtTime(t.startDate)} → ${fmtTime(t.dueDate)}${dep ? `\ndepende do chamado #${dep}` : ""}`;
   const blk = document.createElement("div");
@@ -233,7 +248,7 @@ function buildBlk(cell: HTMLElement, t: Ticket, from: number, to: number): HTMLE
   blk.style.setProperty("--stc", stc);
   blk.title = tooltip;
   const statusBadge = `<span class="st-badge">${esc(statusLabel[t.status] || t.status)}</span>`;
-  const alertDot = late ? '<span class="bt-alert" title="Atrasado"></span>' : "";
+  const alertDot = late ? '<span class="bt-alert" title="Alerta: prazo estourado"></span>' : "";
   const interval = `${min2time(from)}–${min2time(to)}`;
   const footer =
     `<div class="bt-meta"><span class="bt-time" title="${esc(interval)}">${interval}</span>` +
@@ -389,7 +404,7 @@ function renderDayWeek(isDay: boolean): void {
         rows += `<div class="day vtl idle" data-a="${a.id}" data-iso="${d.toISOString()}" title="Dia sem expediente para ${esc(a.name)}"><span class="idle-label">fora do expediente</span></div>`;
         continue;
       }
-      rows += `<div class="day vtl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${dayr.start}" data-e="${dayr.end}" title="Clique para criar um chamado neste dia">${vtlDecorHtml(r, lunchForDow(a, d.getDay()), isToday)}</div>`;
+      rows += `<div class="day vtl${isToday ? " todayCell" : ""}" data-a="${a.id}" data-iso="${d.toISOString()}" data-s="${dayr.start}" data-e="${dayr.end}" title="Clique para criar um chamado neste dia">${vtlDecorHtml(r, dayr, lunchForDow(a, d.getDay()), isToday)}</div>`;
     }
     rows += `</div></div></div>`;
   } else {

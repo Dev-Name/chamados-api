@@ -97,6 +97,11 @@
 .day.vtl.idle .idle-label { background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 2px 8px; border-radius: 20px; }
 
 /* linhas de hora, faixa de almoço e "agora" no dia (horizontais, posições em %) */
+.day.vtl .vtl-off {
+  position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(45deg, var(--out-bg) 0 5px, var(--track) 5px 10px);
+}
+.day.vtl .blk { z-index: 1; }
 .day.vtl .vtl-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
 .day.vtl .vtl-lunch {
   position: absolute; left: 0; right: 0; pointer-events: none;
