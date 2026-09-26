@@ -89,7 +89,9 @@
 /* linhas de hora, faixa de almoço e "agora" no dia (horizontais, posições em %) */
 .day.vtl .vtl-off {
   position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
-  background: repeating-linear-gradient(45deg, var(--out-bg) 0 5px, var(--track) 5px 10px);
+  background:
+    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 12%, transparent) 5px 10px),
+    color-mix(in srgb, var(--text) 7%, transparent);
 }
 .day.vtl .blk { z-index: 1; }
 .day.vtl .vtl-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 75%, transparent); }
@@ -130,7 +132,9 @@
 .day.dtcell .dt { position: absolute; inset: 0; z-index: 0; }
 .day.dtcell .dt-off {
   position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0;
-  background: repeating-linear-gradient(45deg, var(--out-bg) 0 5px, var(--track) 5px 10px);
+  background:
+    repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--text) 12%, transparent) 5px 10px),
+    color-mix(in srgb, var(--text) 7%, transparent);
 }
 .day.dtcell .dt-line { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; border-top: 1px dashed color-mix(in srgb, var(--border) 70%, transparent); }
 .day.dtcell .dt-hlbl {
