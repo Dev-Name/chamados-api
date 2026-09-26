@@ -273,11 +273,15 @@ body.side-min main { margin-left: 60px; }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .util-btn:hover { background: var(--hover-strong); border-color: var(--hover-border); }
-#filterToggle, #menuSummary {
+#filterToggle, #menuSummary, #weekendToggle, #menuLegend, #helpBtn {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-#filterToggle:hover, #menuSummary:hover { background: var(--hover-strong); border-color: var(--hover-border); }
-#filterToggle.active, #filterToggle[aria-expanded="true"], #menuSummary.on {
+#filterToggle:hover, #menuSummary:hover,
+#weekendToggle:hover, #menuLegend:hover, #helpBtn:hover {
+  background: var(--hover-strong); border-color: var(--hover-border);
+}
+#filterToggle.active, #filterToggle[aria-expanded="true"], #menuSummary.on,
+#weekendToggle.on, #weekendToggle[aria-pressed="true"] {
   background: var(--hover-strong); border-color: var(--hover-border); color: var(--text);
   box-shadow: inset 0 0 0 1px var(--border), var(--ui-shadow);
 }
@@ -320,14 +324,9 @@ body.side-min main { margin-left: 60px; }
 .util-menu button {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-.util-menu button:hover { background: var(--hover-strong); border-color: var(--hover-border); }
-#weekendToggle, #weekendToggle[aria-pressed="true"] {
-  color: #334155; border-color: #cbd5e1; background: #fff;
-  box-shadow: var(--ui-shadow);
-}
-#weekendToggle:hover { background: #f8fafc; border-color: #cbd5e1; }
-#weekendToggle .bi, #weekendToggle[aria-pressed="true"] .bi { color: #64748b; }
 .util-menu button .bi { width: 16px; height: 16px; flex: none; }
+.util-menu button .udot { width: 5px; height: 5px; border-radius: 50%; background: transparent; flex: none; }
+.util-menu button.on .udot, .util-menu button[aria-pressed="true"] .udot { background: var(--primary); }
 
 /* Camada 3: Filtros (barra coesa — selects à esquerda, busca elástica à direita) */
 .tb-filters {
