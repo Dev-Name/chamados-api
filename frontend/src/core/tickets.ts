@@ -5,6 +5,8 @@ import { minOfDay, startOf, sameDay } from "./format";
 
 export function categoryColor(id: number): string {
   if (store.prefs.catColors && store.prefs.catColors[id]) return store.prefs.catColors[id];
+  const c = store.categories.find((c) => c.id === id);
+  if (c?.cor) return c.cor;
   return catPalette[id % catPalette.length];
 }
 

@@ -16,6 +16,7 @@ import { applyUiPrefs, wireChrome, showToast, closeAllModals, closeFloats, syncW
 import { wireResponsive, updateFilterCount } from "./ui/responsive";
 import { wireTicketModal } from "./ui/modals-ticket";
 import { wireTicketsModal } from "./ui/modals-tickets";
+import { wireCategoriesModal } from "./ui/modals-categories";
 import { wireAnalystsModal } from "./ui/modals-analyst";
 import { wireQueueModal } from "./ui/modals-queue";
 import { wireReportModal } from "./ui/modals-report";
@@ -239,6 +240,7 @@ function init(): void {
   wireChrome();
   wireTicketModal();
   wireTicketsModal();
+  wireCategoriesModal();
   wireAnalystsModal();
   wireQueueModal();
   wireReportModal();

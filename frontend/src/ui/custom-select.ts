@@ -1,7 +1,14 @@
+import { esc } from "../core/format";
+
 const CHEVRON =
   '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>';
 
 const handles = new Map<HTMLSelectElement, { label: HTMLElement; menu: HTMLElement }>();
+
+/** Swatch de cor quando a <option> tem data-color (bolinha ao lado do texto). */
+function swatchOf(opt: HTMLOptionElement | null): string {
+  return opt?.dataset.color ? `<span class="cs-swatch" style="background:${esc(opt.dataset.color)}"></span>` : "";
+}
 
 function isOptGroup(el: HTMLElement): boolean {
   return el.tagName === "OPTGROUP";
@@ -44,7 +51,8 @@ export function enhanceSelect(sel: HTMLSelectElement): void {
 
   const syncLabel = (): void => {
     const opt = sel.selectedOptions[0];
-    label.textContent = opt ? opt.textContent : sel.dataset.nullLabel ?? "Selecionar…";
+    const text = opt ? opt.textContent : sel.dataset.nullLabel ?? "Selecionar…";
+    label.innerHTML = swatchOf(opt) + esc(text);
     label.title = opt ? opt.textContent : "";
   };
 
@@ -69,7 +77,7 @@ export function enhanceSelect(sel: HTMLSelectElement): void {
       o.className = "cs-field-opt";
       o.setAttribute("role", "option");
       o.setAttribute("aria-selected", String(opt.selected));
-      o.textContent = opt.textContent || "";
+      o.innerHTML = swatchOf(opt) + esc(opt.textContent || "");
       if (opt.disabled) o.disabled = true;
       if (opt.selected) o.classList.add("sel");
       o.addEventListener("click", () => {
@@ -122,6 +130,7 @@ export function syncCustomSelect(sel: HTMLSelectElement): void {
   const rec = handles.get(sel);
   if (!rec) return;
   const opt = sel.selectedOptions[0];
-  rec.label.textContent = opt ? opt.textContent || "" : (sel.dataset.nullLabel ?? "Selecionar…");
+  const text = opt ? opt.textContent || "" : (sel.dataset.nullLabel ?? "Selecionar…");
+  rec.label.innerHTML = swatchOf(opt) + esc(text);
   rec.label.title = opt ? opt.textContent || "" : "";
 }

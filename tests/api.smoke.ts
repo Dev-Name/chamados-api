@@ -21,6 +21,15 @@ async function queue(analystId: number) {
   return q.tickets;
 }
 
+/** Como api(), porém devolve a Response para inspecionar status de erro. */
+async function raw(path: string, method = "GET", body?: unknown) {
+  return fetch(BASE + path, {
+    method,
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+}
+
 async function main() {
   const analysts = await api("/analysts");
   assert(analysts.length >= 2, "deveria ter ao menos 2 analistas");
@@ -101,6 +110,47 @@ async function main() {
   );
 
   console.log(`API + workedMinutes OK (#${ticketId}: ${new Date(tAntes.dueDate).toISOString()} → ${new Date(tDepois.dueDate).toISOString()} → restaurado)`);
+
+  // ---- CRUD de categorias (cor/ativo, unicidade e regra de exclusão) ----
+  const cats = await api("/categories");
+  assert(Array.isArray(cats) && cats.length >= 1, "deveria haver categorias");
+  for (const c of cats) {
+    assert(typeof c.name === "string" && c.name, "categoria deveria ter name");
+    assert(typeof c.cor === "string" && /^#[0-9a-fA-F]{6}$/.test(c.cor), "categoria deveria ter cor hex #RRGGBB");
+    assert(typeof c.ativo === "boolean", "categoria deveria ter ativo");
+    assert(typeof c._count?.tickets === "number", "categoria deveria expor _count.tickets");
+  }
+
+  const unique = "Teste Categoria " + Date.now();
+  const nova = await api("/categories", "POST", { name: unique, cor: "#22c55e" });
+  assert(nova.cor === "#22c55e" && nova.ativo === true, "create deveria persistir cor e ativo");
+
+  const dup = await raw("/categories", "POST", { name: unique, cor: "#ef4444" });
+  assert(dup.status === 409, "nome duplicado deveria retornar 409 (real: " + dup.status + ")");
+
+  const editada = await api("/categories/" + nova.id, "PATCH", { cor: "#8b5cf6", ativo: false });
+  assert(editada.cor === "#8b5cf6" && editada.ativo === false, "patch deveria atualizar cor/ativo");
+
+  const reativada = await api("/categories/" + nova.id, "PATCH", { ativo: true });
+  assert(reativada.ativo === true, "patch deveria reativar a categoria");
+
+  const emUsoCat = cats.find((c: { _count?: { tickets: number } }) => (c._count?.tickets ?? 0) > 0);
+  assert(emUsoCat, "pelo menos uma categoria deveria estar em uso");
+  const emUso = await raw("/categories/" + (emUsoCat as { id: number }).id, "DELETE");
+  assert(emUso.status === 409, "delete de categoria em uso deveria retornar 409 (real: " + emUso.status + ")");
+  const emUsoJson = (await emUso.json()) as { error?: string; message?: string };
+  assert(
+    /inativ/i.test(emUsoJson.error || emUsoJson.message || ""),
+    "mensagem do 409 deveria sugerir inativação"
+  );
+
+  await api("/categories/" + nova.id, "DELETE");
+  const semUso = await api("/categories");
+  assert(
+    !semUso.some((c: { id: number }) => c.id === nova.id),
+    "categoria recém-criada deveria ser removida"
+  );
+  console.log("API + CRUD categorias OK");
 }
 
 main().catch((e) => {

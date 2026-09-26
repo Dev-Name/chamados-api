@@ -2,7 +2,7 @@ import type { Filters, Ticket } from "../core/state";
 import { basePriColor, statusColor, statusLabel, store } from "../core/state";
 import { api, reloadAfterMutation } from "../core/api";
 import { avatarHtml } from "../core/analysts";
-import { DEFAULT_FILTERS, categoriesFromTickets, fillSelectFromPairs, isAll, matchesFilters } from "../core/filters";
+import { DEFAULT_FILTERS, fillSelectFromPairs, isAll, matchesFilters } from "../core/filters";
 import { esc, fmtDay, fmtNum, fmtTime, getCleanName } from "../core/format";
 import { allTickets, isOverdue } from "../core/tickets";
 import { openModal, showToast } from "./chrome";
@@ -26,7 +26,7 @@ function matches(t: Ticket): boolean {
 function fillTicketFilterSelects(): void {
   const opts: Array<[string, Array<[string, string]>]> = [
     ["t-f-analyst", [["", "Todos os analistas"], ...store.analysts.map((a) => [String(a.id), getCleanName(a.name)] as [string, string])]],
-    ["t-f-category", [["0", "Todas as categorias"], ...categoriesFromTickets().map((c) => [String(c.id), c.name] as [string, string])]],
+    ["t-f-category", [["0", "Todas as categorias"], ...store.categories.map((c) => [String(c.id), c.name] as [string, string])]],
     ["t-f-status", [["", "Todos os status"], ...Object.entries(statusLabel) as Array<[string, string]>]],
     ["t-f-priority", [["", "Todas as prioridades"], ...[1, 2, 3, 4, 5].map((p) => [String(p), "P" + p] as [string, string])]],
   ];

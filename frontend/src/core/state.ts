@@ -4,7 +4,22 @@ export type ViewId = GridViewId | "kanban" | "load" | "gantt";
 export interface Category {
   id: number;
   name: string;
+  cor: string;
+  ativo: boolean;
+  _count?: { tickets: number };
 }
+
+/** Opções predefinidas de cor para categorias (rótulo + hex), usadas no select do modal. */
+export const CATEGORY_COLOR_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "Azul", value: "#3b82f6" },
+  { label: "Verde", value: "#22c55e" },
+  { label: "Amarelo", value: "#f59e0b" },
+  { label: "Vermelho", value: "#ef4444" },
+  { label: "Roxo", value: "#8b5cf6" },
+  { label: "Cinza", value: "#64748b" },
+  { label: "Teal", value: "#0d9488" },
+  { label: "Rosa", value: "#ec4899" },
+];
 
 export type AbsenceTypeLabel = "FERIAS" | "FOLGA" | "ATESTADO" | "OUTRO";
 

@@ -16,8 +16,8 @@ async function main() {
     data: { name: "Bob Martins", dailyCapacityMinutes: 360, weeklyCapacityMinutes: [0, 360, 360, 360, 360, 360, 360], workDays: [1, 2, 3, 4, 5, 6] },
   });
 
-  const cat = await prisma.category.create({ data: { name: "Infraestrutura" } });
-  const cat2 = await prisma.category.create({ data: { name: "Sistemas" } });
+  const cat = await prisma.category.create({ data: { name: "Infraestrutura", cor: "#0284c7" } });
+  const cat2 = await prisma.category.create({ data: { name: "Sistemas", cor: "#7c3aed" } });
 
   const t1 = await prisma.ticket.create({
     data: {

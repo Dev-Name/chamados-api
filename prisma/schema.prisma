@@ -84,9 +84,13 @@ model AnalystAbsence {
 }
 
 model Category {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique
-  tickets Ticket[]
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  // Cor do badge/pill da categoria (hex, ex.: "#3b82f6")
+  cor       String
+  // Ativa (true) ou inativada (soft-delete): em uso, a exclusão deve ser bloqueada
+  ativo     Boolean  @default(true)
+  tickets   Ticket[]
   createdAt DateTime @default(now())
 
   @@map("categories")
