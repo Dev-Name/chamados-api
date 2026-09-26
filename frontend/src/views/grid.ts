@@ -523,14 +523,15 @@ function renderDayWeek(isDay: boolean): void {
         const items = tlItems(a, d, r);
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
-        const cellHeight = DT_HOUR_PX;
+        const cellHeightInPx = DT_HOUR_PX;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const startMin = it.from;
-          const endMin = it.to;
-          const heightPx = ((endMin - startMin) / 60) * cellHeight;
-          const topPx = ((startMin - axis.start) / 60) * cellHeight;
-          placeBlockDt(cell, it.t, it.from, it.to, topPx, heightPx, tracks[i], cols);
+          const startHour = it.from / 60;
+          const endHour = it.to / 60;
+          const duration = endHour - startHour;
+          const finalHeight = duration * cellHeightInPx;
+          const topPx = ((it.from - axis.start) / 60) * cellHeightInPx;
+          placeBlockDt(cell, it.t, it.from, it.to, topPx, finalHeight, tracks[i], cols);
         }
       }
     }

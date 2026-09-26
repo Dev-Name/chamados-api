@@ -217,10 +217,24 @@ select:focus, input:focus {
 
 /* Seletor de vistas: pills no desktop (>= lg), dropdown com posição absoluta
    nos ecrãs menores — nunca empurra a barra nem a grelha ao abrir. */
-#viewSwitch { display: none; }
+/* Utilidades responsivas do seletor de vistas (equivalente a `hidden lg:flex` / `flex lg:hidden`) */
+.hidden { display: none; }
+.flex { display: flex; }
+@media (min-width: 1024px) {
+  .lg\:flex { display: flex; }
+  .lg\:hidden { display: none; }
+}
+#viewSwitch {
+  display: none;
+  overflow: visible;
+  max-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+#viewSwitch::-webkit-scrollbar { display: none; }
 #viewSelectWrap { display: inline-flex; }
 @media (min-width: 1024px) {
-  #viewSwitch { display: inline-flex; }
+  #viewSwitch { display: flex; }
   #viewSelectWrap { display: none; }
 }
 

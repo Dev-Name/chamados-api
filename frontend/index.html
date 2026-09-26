@@ -80,7 +80,7 @@
     <!-- CAMADA 2: Toolbar unificada -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <div class="custom-select" id="viewSelectWrap" title="Mudar de vista">
+        <div class="custom-select flex lg:hidden" id="viewSelectWrap" title="Mudar de vista">
           <button id="viewSelect" aria-haspopup="listbox" aria-expanded="false">
             <svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
             <span id="viewSelectLabel">Visão: Semana</span>
@@ -96,7 +96,7 @@
             <div class="cs-option" data-view="gantt" role="option" tabindex="0">Gantt</div>
           </div>
         </div>
-        <div class="seg" id="viewSwitch" role="tablist">
+        <div class="seg hidden lg:flex" id="viewSwitch" role="tablist">
           <button data-view="day" title="Um dia por vez (tecla D)">Dia</button>
           <button data-view="week" class="active" title="A semana inteira (tecla W)">Semana</button>
           <button data-view="month" title="Visão mensal (tecla M)">Mês</button>
