@@ -51,6 +51,8 @@ function openCategoryEditor(id: number | null): void {
   const nameEl = document.getElementById("cat-name") as HTMLInputElement;
   title.textContent = cat ? "Editar categoria" : "Nova categoria";
   nameEl.value = cat ? cat.name : "";
+  const activeEl = document.getElementById("cat-active") as HTMLInputElement;
+  activeEl.checked = cat ? cat.ativo : true;
   fillColorSelect(cat?.cor ?? null);
   openModal("categoryModal");
   window.setTimeout(() => nameEl.focus(), 0);
@@ -65,7 +67,11 @@ async function saveCategory(): Promise<void> {
     nameEl.focus();
     return;
   }
-  const payload = { name, cor: colorSel.value };
+  const payload = {
+    name,
+    cor: colorSel.value,
+    ativo: (document.getElementById("cat-active") as HTMLInputElement).checked,
+  };
   try {
     if (editingId == null) {
       await api("/categories", "POST", payload);

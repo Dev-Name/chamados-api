@@ -66,7 +66,9 @@ function fillAssigneesCombo(editTicket: Ticket | null, presetIds: number[] = [])
 function fillTicketSelects(editTicket: Ticket | null, presetAnalystId: number | null = null): void {
   const catSel = document.getElementById("t-category") as HTMLSelectElement;
   catSel.innerHTML = "";
-  const cats: { id: number; name: string; cor?: string }[] = store.categories.length ? store.categories : categoriesFromTickets();
+  const cats: { id: number; name: string; cor?: string }[] = store.categories.length
+    ? store.categories.filter((c) => c.ativo || (editTicket && editTicket.categoryId === c.id))
+    : categoriesFromTickets();
   for (const c of cats) {
     const o = document.createElement("option");
     o.value = String(c.id);
