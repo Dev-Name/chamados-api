@@ -361,10 +361,12 @@ function placeBlockV(cell: HTMLElement, t: Ticket, from: number, to: number, top
   cell.appendChild(blk);
 }
 
-/* semana (mini-régua vertical): topo proporcional ao horário; colunas quando colidem. */
-function placeBlockDt(cell: HTMLElement, t: Ticket, from: number, to: number, topPct: number, col: number, cols: number): void {
+/* semana (mini-régua vertical): topo e altura em px derivados da hora real do
+   chamado e de uma célula-hora fixa; colunas quando colidem. */
+function placeBlockDt(cell: HTMLElement, t: Ticket, from: number, to: number, topPx: number, heightPx: number, col: number, cols: number): void {
   const blk = buildBlk(cell, t, from, to);
-  blk.style.top = topPct + "%";
+  blk.style.top = topPx + "px";
+  blk.style.height = heightPx + "px";
   blk.style.left = (col / cols) * 100 + "%";
   blk.style.width = 100 / cols + "%";
   cell.appendChild(blk);
@@ -513,11 +515,12 @@ function renderDayWeek(isDay: boolean): void {
         const items = tlItems(a, d, r);
         const tracks = tlTracks(items);
         const cols = tracks.length ? Math.max(...tracks) + 1 : 1;
-        const span = axis.end - axis.start;
+        const cellHeight = DT_HOUR_PX;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
-          const top = ((it.from - axis.start) / span) * 100;
-          placeBlockDt(cell, it.t, it.from, it.to, top, tracks[i], cols);
+          const top = ((it.from - axis.start) / 60) * cellHeight;
+          const h = ((it.to - it.from) / 60) * cellHeight;
+          placeBlockDt(cell, it.t, it.from, it.to, top, h, tracks[i], cols);
         }
       }
     }
